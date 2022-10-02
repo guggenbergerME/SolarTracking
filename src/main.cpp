@@ -1,10 +1,6 @@
 #include <Arduino.h>
 #include "WiFi.h"
 
-// WiFi Zugangsdaten
-const char* WIFI_SSID = "GuggenbergerLinux";
-const char* WIFI_PASS = "Isabelle2014samira";
-
 // Pin output zuweisen
 #define M1_re 2  // D2
 #define M1_li 4  // D4
@@ -17,17 +13,28 @@ void loop                       ();
 void m1                         (int); // Panel neigen
 void m2                         (int); // Panel drehen
 void sturmschutz                ();
+void wifi_setup                 ();
 
+/////////////////////////////////////////////////////////////////////////// SETUP - Wifi
+void wifi_setup() {
 
-/////////////////////////////////////////////////////////////////////////// SETUP
-void setup() {
+// WiFi Zugangsdaten
+const char* WIFI_SSID = "GuggenbergerLinux";
+const char* WIFI_PASS = "Isabelle2014samira";
 
-  // Serielle Kommunikation starten
-  Serial.begin(115200);
+// Static IP
+IPAddress local_IP(192, 168, 13, 50);
+IPAddress gateway(192, 168, 1, 1);
+IPAddress subnet(255, 255, 0, 0);  
 
 // Verbindung zu SSID
 Serial.print("Verbindung zu SSID - ");
-Serial.println(WIFI_SSID);  
+Serial.println(WIFI_SSID); 
+
+// IP zuweisen
+if (!WiFi.config(local_IP, gateway, subnet)) {
+   Serial.println("STA fehlerhaft!");
+  }
 
 // WiFI Modus setzen
 WiFi.mode(WIFI_STA);
@@ -56,6 +63,16 @@ while (WiFi.status() != WL_CONNECTED) {
     Serial.println("IP Adresse: ");
     Serial.println(WiFi.localIP());
 
+}
+
+/////////////////////////////////////////////////////////////////////////// SETUP
+void setup() {
+
+  // Serielle Kommunikation starten
+  Serial.begin(115200);
+
+// Wifi setup
+wifi_setup();
 
 //Pins deklarieren
   pinMode(M1_re,OUTPUT);
