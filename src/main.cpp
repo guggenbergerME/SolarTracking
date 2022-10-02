@@ -85,10 +85,10 @@ void m2(int x) {
 /////////////////////////////////////////////////////////////////////////// Sturmschutz - Solarpanel waagerecht ausrichten 
 void sturmschutz() {
 
-  // Motor m1 Panel waagerecht ausrichten
+  // Motor m1 Panel waagerecht ausrichten bis Endlage
   m1(1);
 
-  // Motor m2 Panel drehen Osten
+  // Motor m2 Panel drehen Osten bis Endlage
   m2(2); 
 
 }
