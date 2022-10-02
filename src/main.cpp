@@ -1,4 +1,9 @@
 #include <Arduino.h>
+#include "WiFi.h"
+
+// WiFi Zugangsdaten
+const char* WIFI_SSID = "GuggenbergerLinux";
+const char* WIFI_PASS = "Isabelle2014samira";
 
 // Pin output zuweisen
 #define M1_re 2  // D2
@@ -19,6 +24,38 @@ void setup() {
 
   // Serielle Kommunikation starten
   Serial.begin(115200);
+
+// Verbindung zu SSID
+Serial.print("Verbindung zu SSID - ");
+Serial.println(WIFI_SSID);  
+
+// WiFI Modus setzen
+WiFi.mode(WIFI_STA);
+WiFi.disconnect();
+delay(100);
+
+WiFi.begin(WIFI_SSID, WIFI_PASS);
+Serial.println("Verbindung aufbauen ...");
+
+while (WiFi.status() != WL_CONNECTED) {
+
+  if (WiFi.status() == WL_CONNECT_FAILED) {
+     Serial.println("Keine Verbindung zum SSID möglich : ");
+     Serial.println();
+     Serial.print("SSID: ");
+     Serial.println(WIFI_SSID);
+     Serial.print("Passwort: ");
+     Serial.println(WIFI_PASS);
+     Serial.println();
+    }
+  delay(2000);
+}
+
+    Serial.println("");
+    Serial.println("Mit Wifi verbunden");
+    Serial.println("IP Adresse: ");
+    Serial.println(WiFi.localIP());
+
 
 //Pins deklarieren
   pinMode(M1_re,OUTPUT);
