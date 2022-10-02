@@ -9,8 +9,9 @@
 
 /////////////////////////////////////////////////////////////////////////// Funktionsprototypen
 void loop                       ();
-void m1                         (int);
-void m2                         (int);
+void m1                         (int); // Panel neigen
+void m2                         (int); // Panel drehen
+void sturmschutz                ();
 
 
 /////////////////////////////////////////////////////////////////////////// SETUP
@@ -25,6 +26,7 @@ void setup() {
   pinMode(M2_re,OUTPUT);
   pinMode(M2_li,OUTPUT);
 }
+
 
 /////////////////////////////////////////////////////////////////////////// m1 Motor 1 einfahren oder ausfahren
 void m1(int x) {
@@ -80,17 +82,30 @@ void m2(int x) {
 
 }
 
+/////////////////////////////////////////////////////////////////////////// Sturmschutz - Solarpanel waagerecht ausrichten 
+void sturmschutz() {
+
+  // Motor m1 Panel waagerecht ausrichten
+  m1(1);
+
+  // Motor m2 Panel drehen Osten
+  m2(2); 
+
+}
+
+
 /////////////////////////////////////////////////////////////////////////// LOOP
 void loop() {
 
 
 
-// Motoren Test
+
+/*// Motoren Test
 m2(1);
 delay(3000);
 m2(2);
 delay(3000);
 m2(3);
 delay(3000);
-
+*/
 }
