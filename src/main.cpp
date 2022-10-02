@@ -185,4 +185,7 @@ void loop() {
       Serial.println("Windstärke prüfen");
     }
 
+//m1(1);
+//m2(1);
+
 }
