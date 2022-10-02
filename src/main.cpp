@@ -1,18 +1,25 @@
 #include <Arduino.h>
+#include <NTPClient.h>
 #include "WiFi.h"
 
-// Pin output zuweisen
+/////////////////////////////////////////////////////////////////////////// Pin output zuweisen
 #define M1_re 2  // D2
 #define M1_li 4  // D4
 
 #define M2_re 5  // D5
 #define M2_li 18  // D18
 
+/////////////////////////////////////////////////////////////////////////// Schleifen verwalten
+unsigned long previousMillis_Sturmcheck = 0;
+unsigned long interval_Sturmcheck = 15000; 
+
 /////////////////////////////////////////////////////////////////////////// Funktionsprototypen
 void loop                       ();
 void m1                         (int); // Panel neigen
 void m2                         (int); // Panel drehen
 void sturmschutz                ();
+void panel_senkrecht            ();
+void sonnenaufgang              ();
 void wifi_setup                 ();
 
 /////////////////////////////////////////////////////////////////////////// SETUP - Wifi
@@ -24,6 +31,7 @@ const char* WIFI_PASS = "Isabelle2014samira";
 
 // Static IP
 IPAddress local_IP(192, 168, 13, 50);
+IPAddress dns(192, 168, 1, 1);
 IPAddress gateway(192, 168, 1, 1);
 IPAddress subnet(255, 255, 0, 0);  
 
@@ -32,7 +40,7 @@ Serial.print("Verbindung zu SSID - ");
 Serial.println(WIFI_SSID); 
 
 // IP zuweisen
-if (!WiFi.config(local_IP, gateway, subnet)) {
+if (!WiFi.config(local_IP, dns, gateway, subnet)) {
    Serial.println("STA fehlerhaft!");
   }
 
@@ -79,7 +87,6 @@ wifi_setup();
   pinMode(M2_re,OUTPUT);
   pinMode(M2_li,OUTPUT);
 }
-
 
 /////////////////////////////////////////////////////////////////////////// m1 Motor 1 einfahren oder ausfahren
 void m1(int x) {
@@ -146,17 +153,36 @@ void sturmschutz() {
 
 }
 
+/////////////////////////////////////////////////////////////////////////// Schneelast / Reinigen - Solarpanel senkrecht ausrichten 
+void panel_senkrecht() {
+
+  // Motor m1 Panel senkrecht ausrichten bis Endlage
+  m1(2);
+
+  // Motor m2 Panel drehen Osten bis Endlage
+  m2(2); 
+
+}
+
+/////////////////////////////////////////////////////////////////////////// Sonnenaufgang - Panele ausrichten 
+void sonnenaufgang() {
+
+  // Motor m1 Panel senkrecht ausrichten bis Endlage
+  m1(1);
+
+  // Motor m2 Panel drehen Osten bis Endlage
+  m2(1); 
+
+}
 
 /////////////////////////////////////////////////////////////////////////// LOOP
 void loop() {
 
+  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Auf Sturm prüfen
+  if (millis() - previousMillis_Sturmcheck > interval_Sturmcheck) {
+      previousMillis_Sturmcheck = millis(); 
+      // Windstärke prüfen
+      Serial.println("Windstärke prüfen");
+    }
 
-/*// Motoren Test
-m2(1);
-delay(3000);
-m2(2);
-delay(3000);
-m2(3);
-delay(3000);
-*/
 }
