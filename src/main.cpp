@@ -57,7 +57,6 @@ while (WiFi.status() != WL_CONNECTED) {
     }
   delay(2000);
 }
-
     Serial.println("");
     Serial.println("Mit Wifi verbunden");
     Serial.println("IP Adresse: ");
@@ -150,8 +149,6 @@ void sturmschutz() {
 
 /////////////////////////////////////////////////////////////////////////// LOOP
 void loop() {
-
-
 
 
 /*// Motoren Test
