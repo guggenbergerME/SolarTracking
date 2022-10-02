@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <NTPClient.h>
+#include "time.h"
 #include "WiFi.h"
 
 /////////////////////////////////////////////////////////////////////////// Pin output zuweisen
@@ -8,6 +8,11 @@
 
 #define M2_re 5  // D5
 #define M2_li 18  // D18
+
+/////////////////////////////////////////////////////////////////////////// NTP Daten
+const char* ntpServer = "pool.ntp.org";
+const long  gmtOffset_sec = 3600;
+const int   daylightOffset_sec = 3600;
 
 /////////////////////////////////////////////////////////////////////////// Schleifen verwalten
 unsigned long previousMillis_Sturmcheck = 0;
@@ -21,6 +26,8 @@ void sturmschutz                ();
 void panel_senkrecht            ();
 void sonnenaufgang              ();
 void wifi_setup                 ();
+void LokaleZeit                 ();
+
 
 /////////////////////////////////////////////////////////////////////////// SETUP - Wifi
 void wifi_setup() {
@@ -31,21 +38,25 @@ const char* WIFI_PASS = "Isabelle2014samira";
 
 // Static IP
 IPAddress local_IP(192, 168, 13, 50);
-IPAddress dns(192, 168, 1, 1);
 IPAddress gateway(192, 168, 1, 1);
-IPAddress subnet(255, 255, 0, 0);  
+IPAddress subnet(255, 0, 0, 0);  
+IPAddress dns(192, 168, 1, 1); 
 
 // Verbindung zu SSID
 Serial.print("Verbindung zu SSID - ");
 Serial.println(WIFI_SSID); 
 
 // IP zuweisen
-if (!WiFi.config(local_IP, dns, gateway, subnet)) {
+if (!WiFi.config(local_IP, gateway, subnet, dns)) {
    Serial.println("STA fehlerhaft!");
   }
 
+// NTP Setup
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  LokaleZeit();
+
 // WiFI Modus setzen
-WiFi.mode(WIFI_STA);
+WiFi.mode(WIFI_OFF);
 WiFi.disconnect();
 delay(100);
 
@@ -86,6 +97,42 @@ wifi_setup();
   pinMode(M1_li,OUTPUT);
   pinMode(M2_re,OUTPUT);
   pinMode(M2_li,OUTPUT);
+}
+
+/////////////////////////////////////////////////////////////////////////// NTP Local Time
+void LokaleZeit(){
+  struct tm timeinfo;
+  if(!getLocalTime(&timeinfo)){
+    Serial.println("Failed to obtain time");
+    return;
+  }
+  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+ /* Serial.print("Day of week: ");
+  Serial.println(&timeinfo, "%A");
+  Serial.print("Month: ");
+  Serial.println(&timeinfo, "%B");
+  Serial.print("Day of Month: ");
+  Serial.println(&timeinfo, "%d");
+  Serial.print("Year: ");
+  Serial.println(&timeinfo, "%Y");
+  Serial.print("Hour: ");
+  Serial.println(&timeinfo, "%H");
+  Serial.print("Hour (12 hour format): ");
+  Serial.println(&timeinfo, "%I");
+  Serial.print("Minute: ");
+  Serial.println(&timeinfo, "%M");
+  Serial.print("Second: ");
+  Serial.println(&timeinfo, "%S");
+
+  Serial.println("Time variables");
+  char timeHour[3];
+  strftime(timeHour,3, "%H", &timeinfo);
+  Serial.println(timeHour);
+  char timeWeekDay[10];
+  strftime(timeWeekDay,10, "%A", &timeinfo);
+  Serial.println(timeWeekDay);
+  Serial.println();
+  */
 }
 
 /////////////////////////////////////////////////////////////////////////// m1 Motor 1 einfahren oder ausfahren
@@ -185,7 +232,7 @@ void loop() {
       Serial.println("Windstärke prüfen");
     }
 
-//m1(1);
-//m2(1);
+  delay(1000);
+  LokaleZeit();
 
 }
