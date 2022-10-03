@@ -5,9 +5,19 @@
 /////////////////////////////////////////////////////////////////////////// Pin output zuweisen
 #define M1_re 2  // D2
 #define M1_li 4  // D4
-
 #define M2_re 5  // D5
 #define M2_li 18  // D18
+
+/////////////////////////////////////////////////////////////////////////// ADC zuweisen
+const int adc_A = 34; //ADC1_6 - Fotowiderstand 
+const int adc_B = 35; //ADC1_7 - Fotowiderstand 
+const int adc_C = 36; //ADC1_8 - Fotowiderstand 
+const int adc_D = 39; //ADC1_9 - Fotowiderstand 
+
+int sensorSonne_A; 
+int sensorSonne_B;
+int sensorSonne_C;
+int sensorSonne_D;
 
 /////////////////////////////////////////////////////////////////////////// NTP Daten
 const char* ntpServer = "pool.ntp.org";
@@ -15,8 +25,11 @@ const long  gmtOffset_sec = 3600;
 const int   daylightOffset_sec = 3600;
 
 /////////////////////////////////////////////////////////////////////////// Schleifen verwalten
-unsigned long previousMillis_Sturmcheck = 0;
+unsigned long previousMillis_Sturmcheck = 0; // Windstärke prüfen
 unsigned long interval_Sturmcheck = 15000; 
+
+unsigned long previousMillis_sonnensensor = 0; // Sonnenstand prüfen
+unsigned long interval_sonnensensor = 5000; 
 
 /////////////////////////////////////////////////////////////////////////// Funktionsprototypen
 void loop                       ();
@@ -25,6 +38,7 @@ void m2                         (int); // Panel drehen
 void sturmschutz                ();
 void panel_senkrecht            ();
 void sonnenaufgang              ();
+void sonnensensor               ();
 void wifi_setup                 ();
 void LokaleZeit                 ();
 
@@ -97,6 +111,26 @@ wifi_setup();
   pinMode(M1_li,OUTPUT);
   pinMode(M2_re,OUTPUT);
   pinMode(M2_li,OUTPUT);
+}
+
+/////////////////////////////////////////////////////////////////////////// Sonnensensor - Fotowiderstände
+void sonnensensor(){
+
+sensorSonne_A = analogRead(adc_A);  
+sensorSonne_B = analogRead(adc_B);
+sensorSonne_C = analogRead(adc_C);
+sensorSonne_D = analogRead(adc_D);
+
+// Werte Seriell ausgeben
+Serial.print("Wert A : ");
+Serial.println(sensorSonne_A);
+Serial.print("Wert B : ");
+Serial.println(sensorSonne_B);
+Serial.print("Wert C : ");
+Serial.println(sensorSonne_C);
+Serial.print("Wert D : ");
+Serial.println(sensorSonne_D);
+
 }
 
 /////////////////////////////////////////////////////////////////////////// NTP Local Time
@@ -232,7 +266,13 @@ void loop() {
       Serial.println("Windstärke prüfen");
     }
 
-  delay(1000);
-  LokaleZeit();
+  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Auf Sturm prüfen
+  if (millis() - previousMillis_sonnensensor > interval_sonnensensor) {
+      previousMillis_sonnensensor = millis(); 
+      // Windstärke prüfen
+      Serial.println("Position der Sonne prüfen.");
+      sonnensensor();
+    }
+
 
 }
