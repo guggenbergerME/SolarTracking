@@ -9,15 +9,15 @@
 #define M2_li 18  // D18
 
 /////////////////////////////////////////////////////////////////////////// ADC zuweisen
-const int adc_A = 34; //ADC1_6 - Fotowiderstand 
-const int adc_B = 35; //ADC1_7 - Fotowiderstand 
-const int adc_C = 36; //ADC1_8 - Fotowiderstand 
-const int adc_D = 39; //ADC1_9 - Fotowiderstand 
+const int adc_NO = 34; //ADC1_6 - Fotowiderstand 
+const int adc_NW = 35; //ADC1_7 - Fotowiderstand 
+const int adc_SO = 36; //ADC1_8 - Fotowiderstand 
+const int adc_SW = 39; //ADC1_9 - Fotowiderstand 
 
-int sensorSonne_A; 
-int sensorSonne_B;
-int sensorSonne_C;
-int sensorSonne_D;
+int sensorSonne_NO, sensorSonne_NW, sensorSonne_SO, sensorSonne_SW, diff_1, diff_2; 
+
+/////////////////////////////////////////////////////////////////////////// Windsensor Variablen
+int wind_zu_stark = 0;
 
 /////////////////////////////////////////////////////////////////////////// NTP Daten
 const char* ntpServer = "pool.ntp.org";
@@ -116,20 +116,41 @@ wifi_setup();
 /////////////////////////////////////////////////////////////////////////// Sonnensensor - Fotowiderstände
 void sonnensensor(){
 
-sensorSonne_A = analogRead(adc_A);  
-sensorSonne_B = analogRead(adc_B);
-sensorSonne_C = analogRead(adc_C);
-sensorSonne_D = analogRead(adc_D);
+sensorSonne_NO = analogRead(adc_NO);  
+sensorSonne_NW = analogRead(adc_NW);
+sensorSonne_SO = analogRead(adc_SO);
+sensorSonne_SW = analogRead(adc_SW);
 
 // Werte Seriell ausgeben
 Serial.print("Wert A : ");
-Serial.println(sensorSonne_A);
+Serial.println(sensorSonne_NO);
 Serial.print("Wert B : ");
-Serial.println(sensorSonne_B);
+Serial.println(sensorSonne_NW);
 Serial.print("Wert C : ");
-Serial.println(sensorSonne_C);
+Serial.println(sensorSonne_SO);
 Serial.print("Wert D : ");
-Serial.println(sensorSonne_D);
+Serial.println(sensorSonne_SW);
+
+// Differenz berechnen
+    diff_1 = (sensorSonne_NO + sensorSonne_NW)/2 - (sensorSonne_SO + sensorSonne_SW)/2;
+    Serial.print("diff 1 : ");
+    Serial.println(diff_1);
+
+    if (diff_1 < 0) {
+            
+        } else {
+            
+        }
+
+    diff_2 = (sensorSonne_NO + sensorSonne_SO)/2 - (sensorSonne_NW + sensorSonne_SW)/2;
+    Serial.print("diff 2 : ");
+    Serial.println(diff_2);
+
+    if (diff_2 < 0) {
+            
+        } else {
+            
+        }
 
 }
 
@@ -226,6 +247,10 @@ void m2(int x) {
 /////////////////////////////////////////////////////////////////////////// Sturmschutz - Solarpanel waagerecht ausrichten 
 void sturmschutz() {
 
+  // Prüfen auf Messwert des Sensors
+
+  // Wenn zu stark wind_zu_stark auf 1 setzen
+
   // Motor m1 Panel waagerecht ausrichten bis Endlage
   m1(1);
 
@@ -269,9 +294,14 @@ void loop() {
   //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Auf Sturm prüfen
   if (millis() - previousMillis_sonnensensor > interval_sonnensensor) {
       previousMillis_sonnensensor = millis(); 
-      // Windstärke prüfen
+      // Sonnenposition prüfen wenn windstärke okay
+      if (wind_zu_stark != 1) {
       Serial.println("Position der Sonne prüfen.");
       sonnensensor();
+      } else {
+        Serial.println("Keine Ausrichtung, da Wind zu stark!");
+      }
+      
     }
 
 
