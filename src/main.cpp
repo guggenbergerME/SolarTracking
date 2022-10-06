@@ -11,8 +11,8 @@
 /////////////////////////////////////////////////////////////////////////// ADC zuweisen
 const int adc_NO = 34; //ADC1_6 - Fotowiderstand 
 const int adc_NW = 35; //ADC1_7 - Fotowiderstand 
-const int adc_SO = 36; //ADC1_8 - Fotowiderstand 
-const int adc_SW = 39; //ADC1_9 - Fotowiderstand 
+const int adc_SO = 33; //ADC1_8 - Fotowiderstand 
+const int adc_SW = 32; //ADC1_9 - Fotowiderstand 
 
 int sensorSonne_NO, sensorSonne_NW, sensorSonne_SO, sensorSonne_SW, diff_1, diff_2; 
 
@@ -29,7 +29,7 @@ unsigned long previousMillis_Sturmcheck = 0; // Windstärke prüfen
 unsigned long interval_Sturmcheck = 15000; 
 
 unsigned long previousMillis_sonnensensor = 0; // Sonnenstand prüfen
-unsigned long interval_sonnensensor = 5000; 
+unsigned long interval_sonnensensor = 1000; 
 
 /////////////////////////////////////////////////////////////////////////// Funktionsprototypen
 void loop                       ();
@@ -122,13 +122,13 @@ sensorSonne_SO = analogRead(adc_SO);
 sensorSonne_SW = analogRead(adc_SW);
 
 // Werte Seriell ausgeben
-Serial.print("Wert A : ");
+Serial.print("Wert sensorSonne_NO : ");
 Serial.println(sensorSonne_NO);
-Serial.print("Wert B : ");
+Serial.print("Wert sensorSonne_NW : ");
 Serial.println(sensorSonne_NW);
-Serial.print("Wert C : ");
+Serial.print("Wert sensorSonne_SO : ");
 Serial.println(sensorSonne_SO);
-Serial.print("Wert D : ");
+Serial.print("Wert sensorSonne_SW : ");
 Serial.println(sensorSonne_SW);
 
 // Differenz berechnen
