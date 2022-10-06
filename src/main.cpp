@@ -17,7 +17,7 @@ const int adc_SW = 32; //ADC1_9 - Fotowiderstand
 int sensorSonne_NO, sensorSonne_NW, sensorSonne_SO, sensorSonne_SW;
 int ausrichten_oben, ausrichten_unten, ausrichten_rechts, ausrichten_links; 
 int differenz_neigen, differenz_drehen;
-int traker_tolleranz = 100;
+int traker_tolleranz = 300; // Getestet mit 300
 
 /////////////////////////////////////////////////////////////////////////// Windsensor Variablen
 int wind_zu_stark = 0;
@@ -124,6 +124,7 @@ sensorSonne_NW = analogRead(adc_NW);
 sensorSonne_SO = analogRead(adc_SO);
 sensorSonne_SW = analogRead(adc_SW);
 
+
 // Werte Seriell ausgeben
 Serial.print("Wert sensorSonne_NO : ");
 Serial.println(sensorSonne_NO);
@@ -133,6 +134,7 @@ Serial.print("Wert sensorSonne_SO : ");
 Serial.println(sensorSonne_SO);
 Serial.print("Wert sensorSonne_SW : ");
 Serial.println(sensorSonne_SW);
+
 
 ausrichten_oben = (sensorSonne_NW + sensorSonne_NO)/2; // Ausrichten oben
 ausrichten_unten = (sensorSonne_SW + sensorSonne_SO)/2; // Ausrichten unten
@@ -150,13 +152,19 @@ if (-1*traker_tolleranz > differenz_neigen || differenz_neigen   > traker_toller
   if (ausrichten_oben > ausrichten_unten)
   {
     // 
-    Serial.print("Motor NEIGEN - oben fahren");
+    Serial.println("Motor NEIGEN - unten fahren");
+    m1(2);
+
   }
   else if (ausrichten_oben < ausrichten_unten)
   {
     //
-    Serial.print("Motor NEIGEN - unten fahren");
+    Serial.println("Motor NEIGEN - oben fahren");
+    m1(1);
+
   }
+} else {
+  m1(3);
 }
 
 // Bewegung ermitteln Drehen
@@ -166,13 +174,17 @@ if (-1*traker_tolleranz > differenz_drehen || differenz_drehen   > traker_toller
   if (ausrichten_links > ausrichten_rechts)
   {
     // 
-    Serial.print("Motor DREHEN - rechts fahren");
-  }
+    Serial.println("Motor DREHEN - rechts fahren");
+    m2(2);
+     }
   else if (ausrichten_links < ausrichten_rechts)
   {
     //
-    Serial.print("Motor DREHEN - links fahren");
+    Serial.println("Motor DREHEN - links fahren");
+    m2(1);
   }
+} else {
+  m2(3);
 }
 
 }
@@ -213,54 +225,54 @@ void LokaleZeit(){
   */
 }
 
-/////////////////////////////////////////////////////////////////////////// m1 Motor 1 einfahren oder ausfahren
+/////////////////////////////////////////////////////////////////////////// m1 Neigen
 void m1(int x) {
-  // x = 1 ausfahren | x = 2 einfahren | x = 3 aus
+  // x = 1 senken | x = 2 heben | x = 3 aus
 
   if (x == 1) {
-    // Motor ausfahren
-    Serial.println("M1 ausfahren");
+    // Panele senken
+    Serial.println("Panele senken");
     digitalWrite(M1_re, HIGH);
     digitalWrite(M1_li, LOW);
   }
 
   if (x == 2) {
-    // Motor einfahren
-    Serial.println("M1 einfahren");
+    // Panele heben
+    Serial.println("Panele heben");
     digitalWrite(M1_re, LOW);
     digitalWrite(M1_li, HIGH);
   }
 
   if (x == 3) {
-    // Motor einfahren
-    Serial.println("M1 einfahren");
+    // Neigen stop
+    Serial.println("Neigen stop");
     digitalWrite(M1_re, LOW);
     digitalWrite(M1_li, LOW);
   }  
 
 }
 
-/////////////////////////////////////////////////////////////////////////// m1 Motor 1 einfahren oder ausfahren
+/////////////////////////////////////////////////////////////////////////// m1 Drehen
 void m2(int x) {
-  // x = 1 ausfahren | x = 2 einfahren | x = 3 aus
+  // x = 1 links | x = 2 rechts | x = 3 aus
 
   if (x == 1) {
-    // Motor ausfahren
-    Serial.println("M2 ausfahren");
+    // Panel links drehen
+    Serial.println("Panel links drehen");
     digitalWrite(M2_re, HIGH);
     digitalWrite(M2_li, LOW);
   }
 
   if (x == 2) {
-    // Motor einfahren
-    Serial.println("M2 einfahren");
+    // Panel rechts drehen
+    Serial.println("Panel rechts drehen");
     digitalWrite(M2_re, LOW);
     digitalWrite(M2_li, HIGH);
   }
 
   if (x == 3) {
-    // Motor einfahren
-    Serial.println("M2 einfahren");
+    // Drehen stop
+    Serial.println("Drehen stop");
     digitalWrite(M2_re, LOW);
     digitalWrite(M2_li, LOW);
   }  
@@ -319,7 +331,7 @@ void loop() {
       previousMillis_sonnensensor = millis(); 
       // Sonnenposition prüfen wenn windstärke okay
       if (wind_zu_stark != 1) {
-      Serial.println("Position der Sonne prüfen.");
+      //Serial.println("Position der Sonne prüfen.");
       sonnensensor();
       } else {
         Serial.println("Keine Ausrichtung, da Wind zu stark!");
