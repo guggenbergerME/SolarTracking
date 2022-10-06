@@ -14,7 +14,10 @@ const int adc_NW = 35; //ADC1_7 - Fotowiderstand
 const int adc_SO = 33; //ADC1_8 - Fotowiderstand 
 const int adc_SW = 32; //ADC1_9 - Fotowiderstand 
 
-int sensorSonne_NO, sensorSonne_NW, sensorSonne_SO, sensorSonne_SW, diff_1, diff_2; 
+int sensorSonne_NO, sensorSonne_NW, sensorSonne_SO, sensorSonne_SW;
+int ausrichten_oben, ausrichten_unten, ausrichten_rechts, ausrichten_links; 
+int differenz_neigen, differenz_drehen;
+int traker_tolleranz = 100;
 
 /////////////////////////////////////////////////////////////////////////// Windsensor Variablen
 int wind_zu_stark = 0;
@@ -131,26 +134,46 @@ Serial.println(sensorSonne_SO);
 Serial.print("Wert sensorSonne_SW : ");
 Serial.println(sensorSonne_SW);
 
-// Differenz berechnen
-    diff_1 = (sensorSonne_NO + sensorSonne_NW)/2 - (sensorSonne_SO + sensorSonne_SW)/2;
-    Serial.print("diff 1 : ");
-    Serial.println(diff_1);
+ausrichten_oben = (sensorSonne_NW + sensorSonne_NO)/2; // Ausrichten oben
+ausrichten_unten = (sensorSonne_SW + sensorSonne_SO)/2; // Ausrichten unten
+ausrichten_links = (sensorSonne_NW + sensorSonne_SW) / 2; // Ausrichten links
+ausrichten_rechts = (sensorSonne_NO + sensorSonne_SO) / 2; // Ausrichten rechts
 
-    if (diff_1 < 0) {
-            
-        } else {
-            
-        }
+// Differenz ermitteln
+int differenz_neigen = ausrichten_oben - ausrichten_unten; // Prüfe Differenz Neigen
+int differenz_drehen = ausrichten_links - ausrichten_rechts;// Prüfe Differenz Drehen
 
-    diff_2 = (sensorSonne_NO + sensorSonne_SO)/2 - (sensorSonne_NW + sensorSonne_SW)/2;
-    Serial.print("diff 2 : ");
-    Serial.println(diff_2);
+// Bewegung ermitteln Neigen
 
-    if (diff_2 < 0) {
-            
-        } else {
-            
-        }
+if (-1*traker_tolleranz > differenz_neigen || differenz_neigen   > traker_tolleranz) 
+{
+  if (ausrichten_oben > ausrichten_unten)
+  {
+    // 
+    Serial.print("Motor NEIGEN - oben fahren");
+  }
+  else if (ausrichten_oben < ausrichten_unten)
+  {
+    //
+    Serial.print("Motor NEIGEN - unten fahren");
+  }
+}
+
+// Bewegung ermitteln Drehen
+
+if (-1*traker_tolleranz > differenz_drehen || differenz_drehen   > traker_tolleranz) 
+{
+  if (ausrichten_links > ausrichten_rechts)
+  {
+    // 
+    Serial.print("Motor DREHEN - rechts fahren");
+  }
+  else if (ausrichten_links < ausrichten_rechts)
+  {
+    //
+    Serial.print("Motor DREHEN - links fahren");
+  }
+}
 
 }
 
