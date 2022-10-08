@@ -170,8 +170,7 @@ if (sonne_quersumme > traker_wolken) {
         //Panele in Nachtstellung fahren
         Serial.println("Panele in Nachtstellung fahren");
         m1(2);
-        delay(50000);
-        m1(3);
+        delay(25000);
     }
 
 } else {
@@ -270,21 +269,21 @@ void m1(int x) {
 
   if (x == 1) {
     // Panele senken
-    Serial.println("Panele senken");
+    //Serial.println("Panele senken");
     digitalWrite(M1_re, HIGH);
     digitalWrite(M1_li, LOW);
   }
 
   if (x == 2) {
     // Panele heben
-    Serial.println("Panele heben");
+    //Serial.println("Panele heben");
     digitalWrite(M1_re, LOW);
     digitalWrite(M1_li, HIGH);
   }
 
   if (x == 3) {
     // Neigen stop
-    Serial.println("Neigen stop");
+    //Serial.println("Neigen stop");
     digitalWrite(M1_re, LOW);
     digitalWrite(M1_li, LOW);
   }  
@@ -297,21 +296,21 @@ void m2(int x) {
 
   if (x == 1) {
     // Panel links drehen
-    Serial.println("Panel links drehen");
+    //erial.println("Panel links drehen");
     digitalWrite(M2_re, HIGH);
     digitalWrite(M2_li, LOW);
   }
 
   if (x == 2) {
     // Panel rechts drehen
-    Serial.println("Panel rechts drehen");
+    //Serial.println("Panel rechts drehen");
     digitalWrite(M2_re, LOW);
     digitalWrite(M2_li, HIGH);
   }
 
   if (x == 3) {
     // Drehen stop
-    Serial.println("Drehen stop");
+    //Serial.println("Drehen stop");
     digitalWrite(M2_re, LOW);
     digitalWrite(M2_li, LOW);
   }  
