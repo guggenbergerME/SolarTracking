@@ -15,9 +15,10 @@ const int adc_SO = 33; //ADC1_8 - Fotowiderstand
 const int adc_SW = 32; //ADC1_9 - Fotowiderstand 
 
 int sensorSonne_NO, sensorSonne_NW, sensorSonne_SO, sensorSonne_SW;
-int ausrichten_oben, ausrichten_unten, ausrichten_rechts, ausrichten_links; 
-int differenz_neigen, differenz_drehen;
-int traker_tolleranz = 300; // Getestet mit 300
+int ausrichten_oben, ausrichten_unten, ausrichten_rechts, ausrichten_links, neigen_fahrt; 
+int differenz_neigen, differenz_drehen, sonne_quersumme;
+int traker_tolleranz = 150; // Getestet mit 300
+int traker_wolken = 2500; // Wolkenschwellwert
 
 /////////////////////////////////////////////////////////////////////////// Windsensor Variablen
 int wind_zu_stark = 0;
@@ -32,7 +33,7 @@ unsigned long previousMillis_Sturmcheck = 0; // Windstärke prüfen
 unsigned long interval_Sturmcheck = 15000; 
 
 unsigned long previousMillis_sonnensensor = 0; // Sonnenstand prüfen
-unsigned long interval_sonnensensor = 1000; 
+unsigned long interval_sonnensensor = 2000; 
 
 /////////////////////////////////////////////////////////////////////////// Funktionsprototypen
 void loop                       ();
@@ -143,48 +144,86 @@ ausrichten_rechts = (sensorSonne_NO + sensorSonne_SO) / 2; // Ausrichten rechts
 
 // Differenz ermitteln
 int differenz_neigen = ausrichten_oben - ausrichten_unten; // Prüfe Differenz Neigen
+Serial.print("Differenz Neigen: ");
+Serial.println(differenz_neigen);
 int differenz_drehen = ausrichten_links - ausrichten_rechts;// Prüfe Differenz Drehen
+Serial.print("Differenz Drehen: ");
+Serial.println(differenz_drehen);
 
-// Bewegung ermitteln Neigen
+// Quersumme aller Werte
+sonne_quersumme = (sensorSonne_NO + sensorSonne_NW + sensorSonne_SO + sensorSonne_SO) / 4;
 
-if (-1*traker_tolleranz > differenz_neigen || differenz_neigen   > traker_tolleranz) 
-{
-  if (ausrichten_oben > ausrichten_unten)
-  {
-    // 
-    Serial.println("Motor NEIGEN - unten fahren");
-    m1(2);
+Serial.print("Sonne Quersumme: ");
+Serial.println(sonne_quersumme);
+Serial.print("Sonne Quersumme max Wert ");
+Serial.println(traker_wolken);
 
-  }
-  else if (ausrichten_oben < ausrichten_unten)
-  {
-    //
-    Serial.println("Motor NEIGEN - oben fahren");
-    m1(1);
 
-  }
+// Justierung stoppen Wolken
+if (sonne_quersumme > traker_wolken) {
+  // Zu viele Wolken keine Regelung
+  Serial.println("Quersumme zu hoch! Keine Steuerung!");
+
+    // Panele auf Nachstellung bringen
+    if (sonne_quersumme > 3850) 
+    {
+        //Panele in Nachtstellung fahren
+        Serial.println("Panele in Nachtstellung fahren");
+        m1(2);
+        delay(50000);
+        m1(3);
+    }
+
 } else {
-  m1(3);
-}
 
-// Bewegung ermitteln Drehen
 
-if (-1*traker_tolleranz > differenz_drehen || differenz_drehen   > traker_tolleranz) 
-{
-  if (ausrichten_links > ausrichten_rechts)
-  {
-    // 
-    Serial.println("Motor DREHEN - rechts fahren");
-    m2(2);
-     }
-  else if (ausrichten_links < ausrichten_rechts)
-  {
-    //
-    Serial.println("Motor DREHEN - links fahren");
-    m2(1);
-  }
-} else {
-  m2(3);
+        // Bewegung ermitteln Neigen (-1*traker_t
+
+        if (-1*traker_tolleranz > differenz_neigen || differenz_neigen > traker_tolleranz) 
+        {
+          if (ausrichten_oben > ausrichten_unten)
+          {
+            // 
+            Serial.println("Motor NEIGEN - unten fahren");
+            m1(1);
+
+
+          }
+          else if (ausrichten_oben < ausrichten_unten)
+          {
+            //
+            Serial.println("Motor NEIGEN - oben fahren");
+            m1(2);
+
+
+          }
+        } else {
+
+          m1(3);
+
+        }
+
+        // Bewegung ermitteln Drehen
+
+        if (-1*traker_tolleranz > differenz_drehen || differenz_drehen > traker_tolleranz) 
+        {
+          if (ausrichten_links > ausrichten_rechts)
+          {
+            // 
+            Serial.println("Motor DREHEN - rechts fahren");
+            m2(2);
+            }
+          else if (ausrichten_links < ausrichten_rechts)
+          {
+            //
+            Serial.println("Motor DREHEN - links fahren");
+            m2(1);
+          }
+        } else {
+          m2(3);
+        }
+
+
 }
 
 }
@@ -318,13 +357,14 @@ void sonnenaufgang() {
 
 /////////////////////////////////////////////////////////////////////////// LOOP
 void loop() {
-
+/*
   //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Auf Sturm prüfen
   if (millis() - previousMillis_Sturmcheck > interval_Sturmcheck) {
       previousMillis_Sturmcheck = millis(); 
       // Windstärke prüfen
       Serial.println("Windstärke prüfen");
     }
+*/
 
   //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Auf Sturm prüfen
   if (millis() - previousMillis_sonnensensor > interval_sonnensensor) {
@@ -339,5 +379,5 @@ void loop() {
       
     }
 
-
+//m1(2);
 }
