@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <ArduinoOTA.h>
 #include "time.h"
 #include "WiFi.h"
 
@@ -17,8 +18,8 @@ const int adc_SW = 32; //ADC1_9 - Fotowiderstand
 int sensorSonne_NO, sensorSonne_NW, sensorSonne_SO, sensorSonne_SW;
 int ausrichten_oben, ausrichten_unten, ausrichten_rechts, ausrichten_links, neigen_fahrt; 
 int differenz_neigen, differenz_drehen, sonne_quersumme;
-int traker_tolleranz = 150; // Getestet mit 300
-int traker_wolken = 2500; // Wolkenschwellwert
+int traker_tolleranz = 18; // Getestet mit 300
+int traker_wolken = 3500; // Wolkenschwellwert
 
 /////////////////////////////////////////////////////////////////////////// Windsensor Variablen
 int wind_zu_stark = 0;
@@ -30,10 +31,10 @@ const int   daylightOffset_sec = 3600;
 
 /////////////////////////////////////////////////////////////////////////// Schleifen verwalten
 unsigned long previousMillis_Sturmcheck = 0; // Windstärke prüfen
-unsigned long interval_Sturmcheck = 15000; 
+unsigned long interval_Sturmcheck = 50000; 
 
 unsigned long previousMillis_sonnensensor = 0; // Sonnenstand prüfen
-unsigned long interval_sonnensensor = 2000; 
+unsigned long interval_sonnensensor = 500; 
 
 /////////////////////////////////////////////////////////////////////////// Funktionsprototypen
 void loop                       ();
@@ -44,6 +45,7 @@ void panel_senkrecht            ();
 void sonnenaufgang              ();
 void sonnensensor               ();
 void wifi_setup                 ();
+void ArduinoOTAsetup            ();
 void LokaleZeit                 ();
 
 
@@ -101,6 +103,39 @@ while (WiFi.status() != WL_CONNECTED) {
 
 }
 
+/////////////////////////////////////////////////////////////////////////// SETUP - OTA
+void ArduinoOTAsetup(){
+
+  ArduinoOTA
+    .onStart([]() {
+      String type;
+      if (ArduinoOTA.getCommand() == U_FLASH)
+        type = "sketch";
+      else // U_SPIFFS
+        type = "filesystem";
+
+      // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+      Serial.println("Start updating " + type);
+    })
+    .onEnd([]() {
+      Serial.println("\nEnd");
+    })
+    .onProgress([](unsigned int progress, unsigned int total) {
+      Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+    })
+    .onError([](ota_error_t error) {
+      Serial.printf("Error[%u]: ", error);
+      if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
+      else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
+      else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+      else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+      else if (error == OTA_END_ERROR) Serial.println("End Failed");
+    });
+
+  ArduinoOTA.begin();
+
+}
+
 /////////////////////////////////////////////////////////////////////////// SETUP
 void setup() {
 
@@ -109,6 +144,9 @@ void setup() {
 
 // Wifi setup
 wifi_setup();
+
+// OTA Setup
+ArduinoOTAsetup();
 
 //Pins deklarieren
   pinMode(M1_re,OUTPUT);
@@ -136,29 +174,29 @@ Serial.println(sensorSonne_SO);
 Serial.print("Wert sensorSonne_SW : ");
 Serial.println(sensorSonne_SW);
 
-
-ausrichten_oben = (sensorSonne_NW + sensorSonne_NO)/2; // Ausrichten oben
-ausrichten_unten = (sensorSonne_SW + sensorSonne_SO)/2; // Ausrichten unten
+/*
+ausrichten_oben = (sensorSonne_NO + sensorSonne_NW) / 2; // Ausrichten oben
+ausrichten_unten = (sensorSonne_SW + sensorSonne_SO) / 2; // Ausrichten unten
 ausrichten_links = (sensorSonne_NW + sensorSonne_SW) / 2; // Ausrichten links
 ausrichten_rechts = (sensorSonne_NO + sensorSonne_SO) / 2; // Ausrichten rechts
 
 // Differenz ermitteln
-int differenz_neigen = ausrichten_oben - ausrichten_unten; // Prüfe Differenz Neigen
+int differenz_neigen = ausrichten_unten - ausrichten_oben; // Prüfe Differenz Neigen
 Serial.print("Differenz Neigen: ");
 Serial.println(differenz_neigen);
-int differenz_drehen = ausrichten_links - ausrichten_rechts;// Prüfe Differenz Drehen
+int differenz_drehen = ausrichten_rechts - ausrichten_links;// Prüfe Differenz Drehen
 Serial.print("Differenz Drehen: ");
 Serial.println(differenz_drehen);
-
+*/
 // Quersumme aller Werte
-sonne_quersumme = (sensorSonne_NO + sensorSonne_NW + sensorSonne_SO + sensorSonne_SO) / 4;
-
+//sonne_quersumme = (sensorSonne_NO + sensorSonne_NW + sensorSonne_SO + sensorSonne_SO) / 4;
+/*
 Serial.print("Sonne Quersumme: ");
 Serial.println(sonne_quersumme);
 Serial.print("Sonne Quersumme max Wert ");
 Serial.println(traker_wolken);
-
-
+*/
+/*
 // Justierung stoppen Wolken
 if (sonne_quersumme > traker_wolken) {
   // Zu viele Wolken keine Regelung
@@ -170,12 +208,54 @@ if (sonne_quersumme > traker_wolken) {
         //Panele in Nachtstellung fahren
         Serial.println("Panele in Nachtstellung fahren");
         m1(2);
-        delay(25000);
+        delay(1000);
     }
 
 } else {
+*/
 
 
+
+// Sonnentraking Neigen
+differenz_neigen = (sensorSonne_NO + sensorSonne_NW)/2 - (sensorSonne_SO + sensorSonne_SW)/2;
+Serial.print("Differenz Neigen: ");
+Serial.println(differenz_neigen);
+     if (differenz_neigen > traker_tolleranz) { 
+
+        if (differenz_neigen < 0) {
+
+            Serial.println("Motor NEIGEN - oben fahren");
+            m1(2);          
+            
+        } else {
+
+            Serial.println("Motor NEIGEN - unten fahren");
+            m1(1);
+
+        }
+
+     }       
+
+// Sonnentraking Drehen
+differenz_drehen = (sensorSonne_NO + sensorSonne_SO)/2 - (sensorSonne_NW + sensorSonne_SW)/2;
+Serial.print("Differenz Drehen: ");
+Serial.println(differenz_drehen);
+     if (differenz_drehen > traker_tolleranz) { 
+
+        if (differenz_drehen < 0) {
+            
+            Serial.println("Motor DREHEN - rechts fahren");
+            m2(1);
+
+        } else {
+
+            Serial.println("Motor DREHEN - links fahren");
+            m2(2);
+
+        }
+
+     }   
+/*
         // Bewegung ermitteln Neigen (-1*traker_t
 
         if (-1*traker_tolleranz > differenz_neigen || differenz_neigen > traker_tolleranz) 
@@ -210,20 +290,20 @@ if (sonne_quersumme > traker_wolken) {
           {
             // 
             Serial.println("Motor DREHEN - rechts fahren");
-            m2(2);
+            m2(1);
             }
           else if (ausrichten_links < ausrichten_rechts)
           {
             //
             Serial.println("Motor DREHEN - links fahren");
-            m2(1);
+            m2(2);
           }
         } else {
           m2(3);
         }
+*/
 
-
-}
+//}
 
 }
 
@@ -323,12 +403,12 @@ void sturmschutz() {
   // Prüfen auf Messwert des Sensors
 
   // Wenn zu stark wind_zu_stark auf 1 setzen
-
+  Serial.println("Sturmschutz fahren");
   // Motor m1 Panel waagerecht ausrichten bis Endlage
-  m1(1);
+  m1(2);
 
   // Motor m2 Panel drehen Osten bis Endlage
-  m2(2); 
+  m2(1); 
 
 }
 
@@ -356,6 +436,10 @@ void sonnenaufgang() {
 
 /////////////////////////////////////////////////////////////////////////// LOOP
 void loop() {
+
+//OTA Handler
+ArduinoOTA.handle();
+
 /*
   //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Auf Sturm prüfen
   if (millis() - previousMillis_Sturmcheck > interval_Sturmcheck) {
@@ -364,7 +448,7 @@ void loop() {
       Serial.println("Windstärke prüfen");
     }
 */
-
+/*
   //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Auf Sturm prüfen
   if (millis() - previousMillis_sonnensensor > interval_sonnensensor) {
       previousMillis_sonnensensor = millis(); 
@@ -377,6 +461,9 @@ void loop() {
       }
       
     }
+*/
 
-//m1(2);
+
+
+//sturmschutz();
 }
