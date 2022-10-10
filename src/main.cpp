@@ -19,7 +19,7 @@ int sensorSonne_NO, sensorSonne_NW, sensorSonne_SO, sensorSonne_SW;
 int ausrichten_oben, ausrichten_unten, ausrichten_rechts, ausrichten_links, neigen_fahrt; 
 int differenz_neigen, differenz_drehen, sonne_quersumme;
 int traker_tolleranz = 18; // Getestet mit 300
-int traker_wolken = 3500; // Wolkenschwellwert
+int helligkeit_schwellwert = 800; // Wolkenschwellwert
 
 /////////////////////////////////////////////////////////////////////////// Windsensor Variablen
 int wind_zu_stark = 0;
@@ -189,121 +189,63 @@ Serial.print("Differenz Drehen: ");
 Serial.println(differenz_drehen);
 */
 // Quersumme aller Werte
-//sonne_quersumme = (sensorSonne_NO + sensorSonne_NW + sensorSonne_SO + sensorSonne_SO) / 4;
-/*
+sonne_quersumme = (sensorSonne_NO + sensorSonne_NW + sensorSonne_SO + sensorSonne_SO) / 4;
+
 Serial.print("Sonne Quersumme: ");
 Serial.println(sonne_quersumme);
 Serial.print("Sonne Quersumme max Wert ");
-Serial.println(traker_wolken);
-*/
-/*
+Serial.println(helligkeit_schwellwert);
+
+
 // Justierung stoppen Wolken
-if (sonne_quersumme > traker_wolken) {
-  // Zu viele Wolken keine Regelung
-  Serial.println("Quersumme zu hoch! Keine Steuerung!");
+if (sonne_quersumme > helligkeit_schwellwert) {
+Serial.println("Helligkeit - Ausrichten ");
 
-    // Panele auf Nachstellung bringen
-    if (sonne_quersumme > 3850) 
-    {
-        //Panele in Nachtstellung fahren
-        Serial.println("Panele in Nachtstellung fahren");
-        m1(2);
-        delay(1000);
-    }
+    // Schwellwert überschritten Ausrichten
+    // Sonnentraking Neigen
+    differenz_neigen = (sensorSonne_NO + sensorSonne_NW)/2 - (sensorSonne_SO + sensorSonne_SW)/2;
+    Serial.print("Differenz Neigen: ");
+    Serial.println(differenz_neigen);
+        if (differenz_neigen > traker_tolleranz) { 
 
-} else {
-*/
+            if (differenz_neigen < 0) {
 
+                Serial.println("Motor NEIGEN - oben fahren");
+                m1(2);          
+                
+            } else {
 
+                Serial.println("Motor NEIGEN - unten fahren");
+                m1(1);
 
-// Sonnentraking Neigen
-differenz_neigen = (sensorSonne_NO + sensorSonne_NW)/2 - (sensorSonne_SO + sensorSonne_SW)/2;
-Serial.print("Differenz Neigen: ");
-Serial.println(differenz_neigen);
-     if (differenz_neigen > traker_tolleranz) { 
-
-        if (differenz_neigen < 0) {
-
-            Serial.println("Motor NEIGEN - oben fahren");
-            m1(2);          
-            
-        } else {
-
-            Serial.println("Motor NEIGEN - unten fahren");
-            m1(1);
-
-        }
-
-     }       
-
-// Sonnentraking Drehen
-differenz_drehen = (sensorSonne_NO + sensorSonne_SO)/2 - (sensorSonne_NW + sensorSonne_SW)/2;
-Serial.print("Differenz Drehen: ");
-Serial.println(differenz_drehen);
-     if (differenz_drehen > traker_tolleranz) { 
-
-        if (differenz_drehen < 0) {
-            
-            Serial.println("Motor DREHEN - rechts fahren");
-            m2(1);
-
-        } else {
-
-            Serial.println("Motor DREHEN - links fahren");
-            m2(2);
-
-        }
-
-     }   
-/*
-        // Bewegung ermitteln Neigen (-1*traker_t
-
-        if (-1*traker_tolleranz > differenz_neigen || differenz_neigen > traker_tolleranz) 
-        {
-          if (ausrichten_oben > ausrichten_unten)
-          {
-            // 
-            Serial.println("Motor NEIGEN - unten fahren");
-            m1(1);
-
-
-          }
-          else if (ausrichten_oben < ausrichten_unten)
-          {
-            //
-            Serial.println("Motor NEIGEN - oben fahren");
-            m1(2);
-
-
-          }
-        } else {
-
-          m1(3);
-
-        }
-
-        // Bewegung ermitteln Drehen
-
-        if (-1*traker_tolleranz > differenz_drehen || differenz_drehen > traker_tolleranz) 
-        {
-          if (ausrichten_links > ausrichten_rechts)
-          {
-            // 
-            Serial.println("Motor DREHEN - rechts fahren");
-            m2(1);
             }
-          else if (ausrichten_links < ausrichten_rechts)
-          {
-            //
-            Serial.println("Motor DREHEN - links fahren");
-            m2(2);
-          }
-        } else {
-          m2(3);
-        }
-*/
 
-//}
+        }       
+
+    // Sonnentraking Drehen
+    differenz_drehen = (sensorSonne_NO + sensorSonne_SO)/2 - (sensorSonne_NW + sensorSonne_SW)/2;
+    Serial.print("Differenz Drehen: ");
+    Serial.println(differenz_drehen);
+        if (differenz_drehen > traker_tolleranz) { 
+
+            if (differenz_drehen < 0) {
+                
+                Serial.println("Motor DREHEN - rechts fahren");
+                m2(1);
+
+            } else {
+
+                Serial.println("Motor DREHEN - links fahren");
+                m2(2);
+
+            }
+
+        }  
+        
+} else {
+Serial.println("Helligkeit - Nichts tun ");
+
+}
 
 }
 
@@ -448,7 +390,7 @@ ArduinoOTA.handle();
       Serial.println("Windstärke prüfen");
     }
 */
-/*
+
   //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Auf Sturm prüfen
   if (millis() - previousMillis_sonnensensor > interval_sonnensensor) {
       previousMillis_sonnensensor = millis(); 
@@ -461,7 +403,7 @@ ArduinoOTA.handle();
       }
       
     }
-*/
+
 
 
 
