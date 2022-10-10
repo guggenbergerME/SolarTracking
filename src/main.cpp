@@ -16,10 +16,10 @@ const int adc_SO = 33; //ADC1_8 - Fotowiderstand
 const int adc_SW = 32; //ADC1_9 - Fotowiderstand 
 
 int sensorSonne_NO, sensorSonne_NW, sensorSonne_SO, sensorSonne_SW;
-int ausrichten_oben, ausrichten_unten, ausrichten_rechts, ausrichten_links, neigen_fahrt; 
-int differenz_neigen, differenz_drehen, sonne_quersumme;
-int traker_tolleranz = 18; // Getestet mit 300
-int helligkeit_schwellwert = 800; // Wolkenschwellwert
+int horizontal_hoch, horizontal_runter, vertikal_rechts, vertikal_links; 
+int differenz_neigen, differenz_drehen, sonne_quersumme, neigen_fahrt;
+int traker_tolleranz = 15; // Getestet mit 300
+int helligkeit_schwellwert = 150; // Wolkenschwellwert
 
 /////////////////////////////////////////////////////////////////////////// Windsensor Variablen
 int wind_zu_stark = 0;
@@ -34,7 +34,7 @@ unsigned long previousMillis_Sturmcheck = 0; // Windstärke prüfen
 unsigned long interval_Sturmcheck = 50000; 
 
 unsigned long previousMillis_sonnensensor = 0; // Sonnenstand prüfen
-unsigned long interval_sonnensensor = 500; 
+unsigned long interval_sonnensensor = 1000; 
 
 /////////////////////////////////////////////////////////////////////////// Funktionsprototypen
 void loop                       ();
@@ -174,76 +174,72 @@ Serial.println(sensorSonne_SO);
 Serial.print("Wert sensorSonne_SW : ");
 Serial.println(sensorSonne_SW);
 
-/*
-ausrichten_oben = (sensorSonne_NO + sensorSonne_NW) / 2; // Ausrichten oben
-ausrichten_unten = (sensorSonne_SW + sensorSonne_SO) / 2; // Ausrichten unten
-ausrichten_links = (sensorSonne_NW + sensorSonne_SW) / 2; // Ausrichten links
-ausrichten_rechts = (sensorSonne_NO + sensorSonne_SO) / 2; // Ausrichten rechts
-
-// Differenz ermitteln
-int differenz_neigen = ausrichten_unten - ausrichten_oben; // Prüfe Differenz Neigen
-Serial.print("Differenz Neigen: ");
-Serial.println(differenz_neigen);
-int differenz_drehen = ausrichten_rechts - ausrichten_links;// Prüfe Differenz Drehen
-Serial.print("Differenz Drehen: ");
-Serial.println(differenz_drehen);
-*/
 // Quersumme aller Werte
-sonne_quersumme = (sensorSonne_NO + sensorSonne_NW + sensorSonne_SO + sensorSonne_SO) / 4;
+sonne_quersumme = (sensorSonne_NO + sensorSonne_NW + sensorSonne_SO + sensorSonne_SW) / 4;
 
 Serial.print("Sonne Quersumme: ");
 Serial.println(sonne_quersumme);
 Serial.print("Sonne Quersumme max Wert ");
 Serial.println(helligkeit_schwellwert);
 
-
 // Justierung stoppen Wolken
-if (sonne_quersumme > helligkeit_schwellwert) {
+if (sonne_quersumme < helligkeit_schwellwert) {
 Serial.println("Helligkeit - Ausrichten ");
+
+// Positionen berechnen
+/*
+sup_aver = (NO + NW)/2;
+inf_aver = (SO + SW)/2;
+right_aver = (NO + SO)/2;
+left_aver = (NW + SW)/2;
+*/
+horizontal_hoch   = (sensorSonne_NO + sensorSonne_NW)/2;
+horizontal_runter = (sensorSonne_SO + sensorSonne_SW)/2;
+vertikal_rechts   = (sensorSonne_NO + sensorSonne_SO)/2;
+vertikal_links    = (sensorSonne_NW + sensorSonne_SW)/2;
+
+    // Sonnentraking Drehen
+    differenz_drehen = (sensorSonne_NW + sensorSonne_SW)/2 - (sensorSonne_NO + sensorSonne_SO)/2;
+    Serial.print("Differenz Drehen: ");
+    Serial.println(differenz_drehen);
+    // Motor stoppen
+    m2(3);
+
+    if (vertikal_rechts > vertikal_links && (vertikal_rechts-vertikal_links) > traker_tolleranz) {
+      Serial.println("Motor drehen - RECHTS");
+      m2(2);  
+    }
+    
+    if (vertikal_links > vertikal_rechts && (vertikal_links-vertikal_rechts) > traker_tolleranz) {
+      Serial.println("Motor drehen - LINKS");
+      m2(1); 
+    }
+       
 
     // Schwellwert überschritten Ausrichten
     // Sonnentraking Neigen
     differenz_neigen = (sensorSonne_NO + sensorSonne_NW)/2 - (sensorSonne_SO + sensorSonne_SW)/2;
     Serial.print("Differenz Neigen: ");
     Serial.println(differenz_neigen);
-        if (differenz_neigen > traker_tolleranz) { 
 
-            if (differenz_neigen < 0) {
+    // Motor stoppen
+    m1(3);
 
-                Serial.println("Motor NEIGEN - oben fahren");
-                m1(2);          
-                
-            } else {
+if (horizontal_hoch > horizontal_runter && (horizontal_hoch-horizontal_runter) > traker_tolleranz) {
+      Serial.println("Motor neigen - RUNTER");
+      m1(1); 
+}
+ 
+if (horizontal_runter > horizontal_hoch && (horizontal_runter-horizontal_hoch) > traker_tolleranz) {
+      Serial.println("Motor neigen - HOCH");
+      m1(2);       
+}
 
-                Serial.println("Motor NEIGEN - unten fahren");
-                m1(1);
 
-            }
-
-        }       
-
-    // Sonnentraking Drehen
-    differenz_drehen = (sensorSonne_NO + sensorSonne_SO)/2 - (sensorSonne_NW + sensorSonne_SW)/2;
-    Serial.print("Differenz Drehen: ");
-    Serial.println(differenz_drehen);
-        if (differenz_drehen > traker_tolleranz) { 
-
-            if (differenz_drehen < 0) {
-                
-                Serial.println("Motor DREHEN - rechts fahren");
-                m2(1);
-
-            } else {
-
-                Serial.println("Motor DREHEN - links fahren");
-                m2(2);
-
-            }
-
-        }  
-        
 } else {
 Serial.println("Helligkeit - Nichts tun ");
+// Platte horizontal stellen
+
 
 }
 
