@@ -1,4 +1,7 @@
 #include <Arduino.h>
+#include <ArduinoOTA.h>
+#include "time.h"
+#include "WiFi.h"
 
 /////////////////////////////////////////////////////////////////////////// Pin output zuweisen
 #define M1_re 2  // D2
@@ -9,6 +12,7 @@
 /////////////////////////////////////////////////////////////////////////// Interrup
 int sturmschutzschalterpin =  13;
 int panelsenkrechtpin =  12;
+
 
 /////////////////////////////////////////////////////////////////////////// ADC zuweisen
 const int adc_NO = 34; //ADC1_6 - Fotowiderstand 
@@ -25,6 +29,11 @@ int helligkeit_schwellwert = 200; // Wolkenschwellwert
 /////////////////////////////////////////////////////////////////////////// Windsensor Variablen
 int wind_zu_stark = 0;
 int sturmschutz_pause = 50000;
+
+/////////////////////////////////////////////////////////////////////////// NTP Daten
+const char* ntpServer = "pool.ntp.org";
+const long  gmtOffset_sec = 3600;
+const int   daylightOffset_sec = 3600;
 
 /////////////////////////////////////////////////////////////////////////// Schleifen verwalten
 unsigned long previousMillis_Sturmcheck = 0; // Windstärke prüfen
@@ -47,8 +56,98 @@ void sturmschutz                ();
 void panel_senkrecht            ();
 void sonnenaufgang              ();
 void sonnensensor               ();
+void wifi_setup                 ();
+void ArduinoOTAsetup            ();
+void LokaleZeit                 ();
 void sturmschutzschalter        ();
 
+
+/////////////////////////////////////////////////////////////////////////// SETUP - Wifi
+void wifi_setup() {
+
+// WiFi Zugangsdaten
+const char* WIFI_SSID = "GuggenbergerLinux";
+const char* WIFI_PASS = "Isabelle2014samira";
+
+// Static IP
+IPAddress local_IP(192, 168, 13, 55);
+IPAddress gateway(192, 168, 1, 1);
+IPAddress subnet(255, 0, 0, 0);  
+IPAddress dns(192, 168, 1, 1); 
+
+// Verbindung zu SSID
+Serial.print("Verbindung zu SSID - ");
+Serial.println(WIFI_SSID); 
+
+// IP zuweisen
+if (!WiFi.config(local_IP, gateway, subnet, dns)) {
+   Serial.println("STA fehlerhaft!");
+  }
+
+// NTP Setup
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  LokaleZeit();
+
+// WiFI Modus setzen
+WiFi.mode(WIFI_OFF);
+WiFi.disconnect();
+delay(100);
+
+WiFi.begin(WIFI_SSID, WIFI_PASS);
+Serial.println("Verbindung aufbauen ...");
+
+while (WiFi.status() != WL_CONNECTED) {
+
+  if (WiFi.status() == WL_CONNECT_FAILED) {
+     Serial.println("Keine Verbindung zum SSID möglich : ");
+     Serial.println();
+     Serial.print("SSID: ");
+     Serial.println(WIFI_SSID);
+     Serial.print("Passwort: ");
+     Serial.println(WIFI_PASS);
+     Serial.println();
+    }
+  delay(2000);
+}
+    Serial.println("");
+    Serial.println("Mit Wifi verbunden");
+    Serial.println("IP Adresse: ");
+    Serial.println(WiFi.localIP());
+
+}
+
+/////////////////////////////////////////////////////////////////////////// SETUP - OTA
+void ArduinoOTAsetup(){
+
+  ArduinoOTA
+    .onStart([]() {
+      String type;
+      if (ArduinoOTA.getCommand() == U_FLASH)
+        type = "sketch";
+      else // U_SPIFFS
+        type = "filesystem";
+
+      // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+      Serial.println("Start updating " + type);
+    })
+    .onEnd([]() {
+      Serial.println("\nEnd");
+    })
+    .onProgress([](unsigned int progress, unsigned int total) {
+      Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+    })
+    .onError([](ota_error_t error) {
+      Serial.printf("Error[%u]: ", error);
+      if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
+      else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
+      else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+      else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+      else if (error == OTA_END_ERROR) Serial.println("End Failed");
+    });
+
+  ArduinoOTA.begin();
+
+}
 
 /////////////////////////////////////////////////////////////////////////// SETUP
 void setup() {
@@ -61,6 +160,12 @@ pinMode(sturmschutzschalterpin, INPUT);
 
 // Panel senkrecht init
 pinMode(panelsenkrechtpin, INPUT);
+
+// Wifi setup
+wifi_setup();
+
+// OTA Setup
+ArduinoOTAsetup();
 
 //Pins deklarieren
   pinMode(M1_re,OUTPUT);
@@ -150,6 +255,42 @@ m1(2);
 
 }
 
+}
+
+/////////////////////////////////////////////////////////////////////////// NTP Local Time
+void LokaleZeit(){
+  struct tm timeinfo;
+  if(!getLocalTime(&timeinfo)){
+    Serial.println("Failed to obtain time");
+    return;
+  }
+  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+ /* Serial.print("Day of week: ");
+  Serial.println(&timeinfo, "%A");
+  Serial.print("Month: ");
+  Serial.println(&timeinfo, "%B");
+  Serial.print("Day of Month: ");
+  Serial.println(&timeinfo, "%d");
+  Serial.print("Year: ");
+  Serial.println(&timeinfo, "%Y");
+  Serial.print("Hour: ");
+  Serial.println(&timeinfo, "%H");
+  Serial.print("Hour (12 hour format): ");
+  Serial.println(&timeinfo, "%I");
+  Serial.print("Minute: ");
+  Serial.println(&timeinfo, "%M");
+  Serial.print("Second: ");
+  Serial.println(&timeinfo, "%S");
+
+  Serial.println("Time variables");
+  char timeHour[3];
+  strftime(timeHour,3, "%H", &timeinfo);
+  Serial.println(timeHour);
+  char timeWeekDay[10];
+  strftime(timeWeekDay,10, "%A", &timeinfo);
+  Serial.println(timeWeekDay);
+  Serial.println();
+  */
 }
 
 /////////////////////////////////////////////////////////////////////////// m1 Neigen
@@ -265,6 +406,9 @@ void sturmschutzschalter() {
 
 /////////////////////////////////////////////////////////////////////////// LOOP
 void loop() {
+
+//OTA Handler
+ArduinoOTA.handle();
 
 /*
   //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Auf Sturm prüfen
