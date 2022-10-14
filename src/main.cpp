@@ -9,20 +9,26 @@
 #define M2_re 5  // D5
 #define M2_li 18  // D18
 
+/////////////////////////////////////////////////////////////////////////// Interrup
+int sturmschutzschalterpin =  13;
+int panelsenkrechtpin =  12;
+
+
 /////////////////////////////////////////////////////////////////////////// ADC zuweisen
 const int adc_NO = 34; //ADC1_6 - Fotowiderstand 
 const int adc_NW = 35; //ADC1_7 - Fotowiderstand 
-const int adc_SO = 33; //ADC1_8 - Fotowiderstand 
+const int adc_SO = 33; //ADC1_8 - Fotowiderstand
 const int adc_SW = 32; //ADC1_9 - Fotowiderstand 
 
 int sensorSonne_NO, sensorSonne_NW, sensorSonne_SO, sensorSonne_SW;
 int horizontal_hoch, horizontal_runter, vertikal_rechts, vertikal_links; 
 int differenz_neigen, differenz_drehen, sonne_quersumme, neigen_fahrt;
-int traker_tolleranz = 15; // Getestet mit 300
+int traker_tolleranz = 45; // Getestet mit 300
 int helligkeit_schwellwert = 150; // Wolkenschwellwert
 
 /////////////////////////////////////////////////////////////////////////// Windsensor Variablen
 int wind_zu_stark = 0;
+int sturmschutz_pause = 50000;
 
 /////////////////////////////////////////////////////////////////////////// NTP Daten
 const char* ntpServer = "pool.ntp.org";
@@ -34,7 +40,13 @@ unsigned long previousMillis_Sturmcheck = 0; // Windstärke prüfen
 unsigned long interval_Sturmcheck = 50000; 
 
 unsigned long previousMillis_sonnensensor = 0; // Sonnenstand prüfen
-unsigned long interval_sonnensensor = 1000; 
+unsigned long interval_sonnensensor = 1100; 
+
+unsigned long previousMillis_sturmschutzschalter = 0; // Sturmschutz Schalter prüfen
+unsigned long interval_sturmschutzschalter = 1200; 
+
+unsigned long previousMillis_panelsenkrecht = 0; // Sturmschutz Schalter prüfen
+unsigned long interval_panelsenkrecht = 1300; 
 
 /////////////////////////////////////////////////////////////////////////// Funktionsprototypen
 void loop                       ();
@@ -47,6 +59,7 @@ void sonnensensor               ();
 void wifi_setup                 ();
 void ArduinoOTAsetup            ();
 void LokaleZeit                 ();
+void sturmschutzschalter        ();
 
 
 /////////////////////////////////////////////////////////////////////////// SETUP - Wifi
@@ -57,7 +70,7 @@ const char* WIFI_SSID = "GuggenbergerLinux";
 const char* WIFI_PASS = "Isabelle2014samira";
 
 // Static IP
-IPAddress local_IP(192, 168, 13, 50);
+IPAddress local_IP(192, 168, 13, 55);
 IPAddress gateway(192, 168, 1, 1);
 IPAddress subnet(255, 0, 0, 0);  
 IPAddress dns(192, 168, 1, 1); 
@@ -142,6 +155,12 @@ void setup() {
   // Serielle Kommunikation starten
   Serial.begin(115200);
 
+// Sturmschutzschalter init
+pinMode(sturmschutzschalterpin, INPUT);
+
+// Panel senkrecht init
+pinMode(panelsenkrechtpin, INPUT);
+
 // Wifi setup
 wifi_setup();
 
@@ -186,13 +205,6 @@ Serial.println(helligkeit_schwellwert);
 if (sonne_quersumme < helligkeit_schwellwert) {
 Serial.println("Helligkeit - Ausrichten ");
 
-// Positionen berechnen
-/*
-sup_aver = (NO + NW)/2;
-inf_aver = (SO + SW)/2;
-right_aver = (NO + SO)/2;
-left_aver = (NW + SW)/2;
-*/
 horizontal_hoch   = (sensorSonne_NO + sensorSonne_NW)/2;
 horizontal_runter = (sensorSonne_SO + sensorSonne_SW)/2;
 vertikal_rechts   = (sensorSonne_NO + sensorSonne_SO)/2;
@@ -239,7 +251,7 @@ if (horizontal_runter > horizontal_hoch && (horizontal_runter-horizontal_hoch) >
 } else {
 Serial.println("Helligkeit - Nichts tun ");
 // Platte horizontal stellen
-
+m1(2);
 
 }
 
@@ -343,21 +355,27 @@ void sturmschutz() {
   // Wenn zu stark wind_zu_stark auf 1 setzen
   Serial.println("Sturmschutz fahren");
   // Motor m1 Panel waagerecht ausrichten bis Endlage
-  m1(2);
+ 
 
   // Motor m2 Panel drehen Osten bis Endlage
-  m2(1); 
+  
+  //Sturmschutz pause
+  delay(sturmschutz_pause);
 
 }
 
 /////////////////////////////////////////////////////////////////////////// Schneelast / Reinigen - Solarpanel senkrecht ausrichten 
 void panel_senkrecht() {
 
-  // Motor m1 Panel senkrecht ausrichten bis Endlage
-  m1(2);
+  // Schalter abfragen
+  	while( digitalRead(panelsenkrechtpin) == 1 ) //while the button is pressed
+      {
+        //blink
+        Serial.println("Panele senkrecht stellen");
+        m1(1);
 
-  // Motor m2 Panel drehen Osten bis Endlage
-  m2(2); 
+        delay(500);
+      }
 
 }
 
@@ -369,6 +387,20 @@ void sonnenaufgang() {
 
   // Motor m2 Panel drehen Osten bis Endlage
   m2(1); 
+
+}
+
+/////////////////////////////////////////////////////////////////////////// Sonnenaufgang - Panele ausrichten 
+void sturmschutzschalter() {
+
+  // Schalter abfragen
+  	while( digitalRead(sturmschutzschalterpin) == 1 ) //while the button is pressed
+      {
+        //blink
+        Serial.println("Alles unterbrechen wegen Windschutz!");
+        m1(2);
+        delay(500);
+      }
 
 }
 
@@ -387,6 +419,23 @@ ArduinoOTA.handle();
     }
 */
 
+  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Sturmschutzschalter abfragen
+  if (millis() - previousMillis_sturmschutzschalter > interval_sturmschutzschalter) {
+      previousMillis_sturmschutzschalter = millis(); 
+      // Windstärke prüfen
+      Serial.println("Sturmschutzschalter Prüfen");
+      sturmschutzschalter();
+    }
+
+  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Panele senkrecht
+  if (millis() - previousMillis_panelsenkrecht > interval_panelsenkrecht) {
+      previousMillis_panelsenkrecht = millis(); 
+      // Windstärke prüfen
+      Serial.println("Panele senkrecht stellen");
+      panel_senkrecht();
+    }
+
+
   //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Auf Sturm prüfen
   if (millis() - previousMillis_sonnensensor > interval_sonnensensor) {
       previousMillis_sonnensensor = millis(); 
@@ -397,11 +446,7 @@ ArduinoOTA.handle();
       } else {
         Serial.println("Keine Ausrichtung, da Wind zu stark!");
       }
-      
+  
     }
 
-
-
-
-//sturmschutz();
 }
