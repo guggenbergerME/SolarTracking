@@ -20,8 +20,8 @@ int sensorSonne_NO, sensorSonne_NW, sensorSonne_SO, sensorSonne_SW;
 int horizontal_hoch, horizontal_runter, vertikal_rechts, vertikal_links; 
 int differenz_neigen, differenz_drehen, sonne_quersumme, neigen_fahrt;
 int traker_tolleranz = 20; // Getestet mit 300
-int helligkeit_schwellwert = 175; // Wolkenschwellwert
-int helligkeit_nachtstellung = 1000; // Wolkenschwellwert
+int helligkeit_schwellwert = 150; // Wolkenschwellwert
+int helligkeit_nachtstellung = 1500; // Wolkenschwellwert
 
 /////////////////////////////////////////////////////////////////////////// Windsensor Variablen
 int wind_zu_stark = 0;
