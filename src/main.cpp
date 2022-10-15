@@ -19,8 +19,9 @@ const int adc_SW = 32; //ADC1_9 - Fotowiderstand
 int sensorSonne_NO, sensorSonne_NW, sensorSonne_SO, sensorSonne_SW;
 int horizontal_hoch, horizontal_runter, vertikal_rechts, vertikal_links; 
 int differenz_neigen, differenz_drehen, sonne_quersumme, neigen_fahrt;
-int traker_tolleranz = 45; // Getestet mit 300
-int helligkeit_schwellwert = 200; // Wolkenschwellwert
+int traker_tolleranz = 20; // Getestet mit 300
+int helligkeit_schwellwert = 175; // Wolkenschwellwert
+int helligkeit_nachtstellung = 1000; // Wolkenschwellwert
 
 /////////////////////////////////////////////////////////////////////////// Windsensor Variablen
 int wind_zu_stark = 0;
@@ -54,7 +55,7 @@ void sturmschutzschalter        ();
 void setup() {
 
   // Serielle Kommunikation starten
-  Serial.begin(115200);
+  Serial.begin(38400);
 
 // Sturmschutzschalter init
 pinMode(sturmschutzschalterpin, INPUT);
@@ -109,19 +110,22 @@ vertikal_links    = (sensorSonne_NW + sensorSonne_SW)/2;
     differenz_drehen = (sensorSonne_NW + sensorSonne_SW)/2 - (sensorSonne_NO + sensorSonne_SO)/2;
     Serial.print("Differenz Drehen: ");
     Serial.println(differenz_drehen);
-    // Motor stoppen
-    m2(3);
+
 
     if (vertikal_rechts > vertikal_links && (vertikal_rechts-vertikal_links) > traker_tolleranz) {
       Serial.println("Motor drehen - RECHTS");
       m2(2);  
+       delay(1000);
     }
     
     if (vertikal_links > vertikal_rechts && (vertikal_links-vertikal_rechts) > traker_tolleranz) {
       Serial.println("Motor drehen - LINKS");
       m2(1); 
+       delay(1000);
     }
-       
+    // Motor stoppe
+        m2(3);
+    delay(1500);   
 
     // Schwellwert überschritten Ausrichten
     // Sonnentraking Neigen
@@ -129,24 +133,37 @@ vertikal_links    = (sensorSonne_NW + sensorSonne_SW)/2;
     Serial.print("Differenz Neigen: ");
     Serial.println(differenz_neigen);
 
-    // Motor stoppen
-    m1(3);
 
 if (horizontal_hoch > horizontal_runter && (horizontal_hoch-horizontal_runter) > traker_tolleranz) {
       Serial.println("Motor neigen - RUNTER");
       m1(1); 
+       delay(1000);
 }
  
 if (horizontal_runter > horizontal_hoch && (horizontal_runter-horizontal_hoch) > traker_tolleranz) {
       Serial.println("Motor neigen - HOCH");
-      m1(2);       
+      m1(2); 
+       delay(1000);      
 }
+
+    // Motor stoppen
+    m1(3);
+   delay(1500);
 
 
 } else {
 Serial.println("Helligkeit - Nichts tun ");
-// Platte horizontal stellen
-m1(2);
+
+// Wenn die Helligkeit dunkler als der Nachtwert ist Platten horizontal stellen
+
+  if (sonne_quersumme > helligkeit_nachtstellung) { 
+  // Platte horizontal stellen
+    Serial.println("Platten Nachtstellung");
+    m1(2);
+  } else {
+    Serial.println("Zu wenig Sonne, keine Bewegung");
+
+  }
 
 }
 
@@ -304,5 +321,5 @@ void loop() {
       }
   
     }
-
+delay(800);
 }
