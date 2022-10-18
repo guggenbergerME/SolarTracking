@@ -19,20 +19,25 @@ const int adc_SW = 32; //ADC1_9 - Fotowiderstand
 int sensorSonne_NO, sensorSonne_NW, sensorSonne_SO, sensorSonne_SW;
 int horizontal_hoch, horizontal_runter, vertikal_rechts, vertikal_links; 
 int differenz_neigen, differenz_drehen, sonne_quersumme, neigen_fahrt;
-int traker_tolleranz = 20; // Getestet mit 300
-int helligkeit_schwellwert = 150; // Wolkenschwellwert
+int traker_tolleranz = 35; // Getestet mit 300
+int helligkeit_schwellwert = 500; // Wolkenschwellwert
 int helligkeit_nachtstellung = 1500; // Wolkenschwellwert
 
 /////////////////////////////////////////////////////////////////////////// Windsensor Variablen
 int wind_zu_stark = 0;
-int sturmschutz_pause = 50000;
+int sturmschutz_pause = 300000;
+int pin_anemometer = 23; // Impulsgeber des Anemometer
+unsigned long start_time = 0;
+unsigned long end_time = 0;
+int steps = 0;
+int steps_schwellwert = 7;
 
 /////////////////////////////////////////////////////////////////////////// Schleifen verwalten
 unsigned long previousMillis_Sturmcheck = 0; // Windstärke prüfen
-unsigned long interval_Sturmcheck = 50000; 
+unsigned long interval_Sturmcheck = 2000; 
 
 unsigned long previousMillis_sonnensensor = 0; // Sonnenstand prüfen
-unsigned long interval_sonnensensor = 1100; 
+unsigned long interval_sonnensensor = 2500; 
 
 unsigned long previousMillis_sturmschutzschalter = 0; // Sturmschutz Schalter prüfen
 unsigned long interval_sturmschutzschalter = 1200; 
@@ -103,7 +108,7 @@ Serial.println("Helligkeit - Ausrichten ");
 
 horizontal_hoch   = (sensorSonne_NO + sensorSonne_NW)/2;
 horizontal_runter = (sensorSonne_SO + sensorSonne_SW)/2;
-vertikal_rechts   = (sensorSonne_NO + sensorSonne_SO)/2;
+vertikal_rechts   = (sensorSonne_NO + sensorSonne_SO )/2;
 vertikal_links    = (sensorSonne_NW + sensorSonne_SW)/2;
 
     // Sonnentraking Drehen
@@ -125,7 +130,7 @@ vertikal_links    = (sensorSonne_NW + sensorSonne_SW)/2;
     }
     // Motor stoppe
         m2(3);
-    delay(1500);   
+    delay(3000);   
 
     // Schwellwert überschritten Ausrichten
     // Sonnentraking Neigen
@@ -148,7 +153,7 @@ if (horizontal_runter > horizontal_hoch && (horizontal_runter-horizontal_hoch) >
 
     // Motor stoppen
     m1(3);
-   delay(1500);
+    delay(3000);
 
 
 } else {
@@ -226,17 +231,38 @@ void m2(int x) {
 /////////////////////////////////////////////////////////////////////////// Sturmschutz - Solarpanel waagerecht ausrichten 
 void sturmschutz() {
 
-  // Prüfen auf Messwert des Sensors
+  // Speedsensor auslesen
+  //Serial.println("Winddaten messen");
 
-  // Wenn zu stark wind_zu_stark auf 1 setzen
-  Serial.println("Sturmschutz fahren");
-  // Motor m1 Panel waagerecht ausrichten bis Endlage
- 
+    start_time=millis();
+    end_time=start_time+1000;
+      while(millis()<end_time)
+      {
+          if(digitalRead(pin_anemometer))
+          {
+            steps=steps+1; 
+            while(digitalRead(pin_anemometer));
+          }
+          
+      }
+    Serial.print("Steps ");
+    Serial.println(steps);
 
-  // Motor m2 Panel drehen Osten bis Endlage
-  
-  //Sturmschutz pause
-  delay(sturmschutz_pause);
+    if (steps > steps_schwellwert) {
+      // Variable Windschutz schreiben
+      wind_zu_stark = 1;
+      // Wenn Wind eine gewisse stärke erreicht hat Panel fahren und int wind_zu_stark auf 1 setzen
+
+        Serial.println("Wind zu stark Panele sichern ");
+        // Panel in Position fahren
+        m1(2);
+        // Lange pause um Prozessor zu unterbrechen.
+        delay (sturmschutz_pause);
+        
+    } else {
+      wind_zu_stark = 0;
+
+    }
 
 }
 
@@ -283,15 +309,18 @@ void sturmschutzschalter() {
 /////////////////////////////////////////////////////////////////////////// LOOP
 void loop() {
 
-/*
+
   //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Auf Sturm prüfen
   if (millis() - previousMillis_Sturmcheck > interval_Sturmcheck) {
       previousMillis_Sturmcheck = millis(); 
       // Windstärke prüfen
       Serial.println("Windstärke prüfen");
+      // Messwert zurücksetzen
+      steps = 0;
+      sturmschutz();
     }
-*/
 
+/*
   //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Sturmschutzschalter abfragen
   if (millis() - previousMillis_sturmschutzschalter > interval_sturmschutzschalter) {
       previousMillis_sturmschutzschalter = millis(); 
@@ -308,6 +337,7 @@ void loop() {
       panel_senkrecht();
     }
 
+*/
 
   //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Auf Sturm prüfen
   if (millis() - previousMillis_sonnensensor > interval_sonnensensor) {
@@ -321,5 +351,8 @@ void loop() {
       }
   
     }
+
+
+
 delay(800);
 }
