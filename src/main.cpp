@@ -25,16 +25,16 @@ int helligkeit_nachtstellung = 1500; // Wolkenschwellwert
 
 /////////////////////////////////////////////////////////////////////////// Windsensor Variablen
 int wind_zu_stark = 0;
-int sturmschutz_pause = 300000;
+int sturmschutz_pause = 800000;
 int pin_anemometer = 23; // Impulsgeber des Anemometer
 unsigned long start_time = 0;
 unsigned long end_time = 0;
 int steps = 0;
-int steps_schwellwert = 7;
+int steps_schwellwert = 5;
 
 /////////////////////////////////////////////////////////////////////////// Schleifen verwalten
 unsigned long previousMillis_Sturmcheck = 0; // Windstärke prüfen
-unsigned long interval_Sturmcheck = 2000; 
+unsigned long interval_Sturmcheck = 5000; 
 
 unsigned long previousMillis_sonnensensor = 0; // Sonnenstand prüfen
 unsigned long interval_sonnensensor = 2500; 
@@ -234,18 +234,21 @@ void sturmschutz() {
   // Speedsensor auslesen
   //Serial.println("Winddaten messen");
 
-    start_time=millis();
+     start_time=millis();
     end_time=start_time+1000;
       while(millis()<end_time)
       {
-          if(digitalRead(pin_anemometer))
-          {
-            steps=steps+1; 
-            while(digitalRead(pin_anemometer));
-          }
-          
+
+        if(digitalRead(pin_anemometer))
+        {
+          steps=steps+1; 
+          //while(digitalRead(pin_anemometer));
+          while(digitalRead(pin_anemometer));
+        }
+      
       }
-    Serial.print("Steps ");
+
+    Serial.print("Steps  ");
     Serial.println(steps);
 
     if (steps > steps_schwellwert) {
@@ -329,6 +332,7 @@ void loop() {
       sturmschutzschalter();
     }
 
+
   //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Panele senkrecht
   if (millis() - previousMillis_panelsenkrecht > interval_panelsenkrecht) {
       previousMillis_panelsenkrecht = millis(); 
@@ -336,7 +340,6 @@ void loop() {
       Serial.println("Panele senkrecht stellen");
       panel_senkrecht();
     }
-
 */
 
   //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Auf Sturm prüfen
@@ -344,8 +347,8 @@ void loop() {
       previousMillis_sonnensensor = millis(); 
       // Sonnenposition prüfen wenn windstärke okay
       if (wind_zu_stark != 1) {
-      //Serial.println("Position der Sonne prüfen.");
-      sonnensensor();
+        Serial.println("Position der Sonne prüfen.");
+      //sonnensensor();
       } else {
         Serial.println("Keine Ausrichtung, da Wind zu stark!");
       }
