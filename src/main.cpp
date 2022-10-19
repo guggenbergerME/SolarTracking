@@ -10,6 +10,7 @@
 int sturmschutzschalterpin =  13;
 int panelsenkrechtpin =  12;
 
+
 /////////////////////////////////////////////////////////////////////////// ADC zuweisen
 const int adc_NO = 34; //ADC1_6 - Fotowiderstand 
 const int adc_NW = 35; //ADC1_7 - Fotowiderstand 
