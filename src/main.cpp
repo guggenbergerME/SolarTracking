@@ -25,12 +25,12 @@ int helligkeit_nachtstellung = 1500; // Wolkenschwellwert
 
 /////////////////////////////////////////////////////////////////////////// Windsensor Variablen
 int wind_zu_stark = 0;
-int sturmschutz_pause = 800000;
+int sturmschutz_pause = 5000000;
 int pin_anemometer = 23; // Impulsgeber des Anemometer
 unsigned long start_time = 0;
 unsigned long end_time = 0;
 int steps = 0;
-int steps_schwellwert = 5;
+int steps_schwellwert = 4;
 
 /////////////////////////////////////////////////////////////////////////// Schleifen verwalten
 unsigned long previousMillis_Sturmcheck = 0; // Windstärke prüfen
@@ -323,7 +323,7 @@ void loop() {
       sturmschutz();
     }
 
-/*
+
   //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Sturmschutzschalter abfragen
   if (millis() - previousMillis_sturmschutzschalter > interval_sturmschutzschalter) {
       previousMillis_sturmschutzschalter = millis(); 
@@ -340,7 +340,7 @@ void loop() {
       Serial.println("Panele senkrecht stellen");
       panel_senkrecht();
     }
-*/
+
 
   //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Auf Sturm prüfen
   if (millis() - previousMillis_sonnensensor > interval_sonnensensor) {
