@@ -10,7 +10,6 @@
 int sturmschutzschalterpin =  13;
 int panelsenkrechtpin =  12;
 
-
 /////////////////////////////////////////////////////////////////////////// ADC zuweisen
 const int adc_NO = 34; //ADC1_6 - Fotowiderstand 
 const int adc_NW = 35; //ADC1_7 - Fotowiderstand 
@@ -38,7 +37,7 @@ unsigned long previousMillis_Sturmcheck = 0; // Windstärke prüfen
 unsigned long interval_Sturmcheck = 5000; 
 
 unsigned long previousMillis_sonnensensor = 0; // Sonnenstand prüfen
-unsigned long interval_sonnensensor = 2500; 
+unsigned long interval_sonnensensor = 5000; 
 
 unsigned long previousMillis_sturmschutzschalter = 0; // Sturmschutz Schalter prüfen
 unsigned long interval_sturmschutzschalter = 1200; 
@@ -329,7 +328,7 @@ void loop() {
   if (millis() - previousMillis_sturmschutzschalter > interval_sturmschutzschalter) {
       previousMillis_sturmschutzschalter = millis(); 
       // Windstärke prüfen
-      Serial.println("Sturmschutzschalter Prüfen");
+      //Serial.println("Sturmschutzschalter Prüfen");
       sturmschutzschalter();
     }
 
@@ -338,7 +337,7 @@ void loop() {
   if (millis() - previousMillis_panelsenkrecht > interval_panelsenkrecht) {
       previousMillis_panelsenkrecht = millis(); 
       // Windstärke prüfen
-      Serial.println("Panele senkrecht stellen");
+      //Serial.println("Panele senkrecht stellen");
       panel_senkrecht();
     }
 
@@ -349,7 +348,7 @@ void loop() {
       // Sonnenposition prüfen wenn windstärke okay
       if (wind_zu_stark != 1) {
         Serial.println("Position der Sonne prüfen.");
-      //sonnensensor();
+      sonnensensor();
       } else {
         Serial.println("Keine Ausrichtung, da Wind zu stark!");
       }
