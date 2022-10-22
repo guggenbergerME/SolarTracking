@@ -19,8 +19,9 @@ const int adc_SW = 32; //ADC1_9 - Fotowiderstand
 int sensorSonne_NO, sensorSonne_NW, sensorSonne_SO, sensorSonne_SW;
 int horizontal_hoch, horizontal_runter, vertikal_rechts, vertikal_links; 
 int differenz_neigen, differenz_drehen, sonne_quersumme, neigen_fahrt;
-int traker_tolleranz = 40; // Getestet mit 300
-int helligkeit_schwellwert = 220; // Wolkenschwellwert
+int traker_tolleranz_neigen = 100; // Getestet mit 300
+int traker_tolleranz_drehen = 150;
+int helligkeit_schwellwert = 700; // Wolkenschwellwert
 int helligkeit_nachtstellung = 1500; // Wolkenschwellwert
 
 /////////////////////////////////////////////////////////////////////////// Windsensor Variablen
@@ -30,14 +31,14 @@ int pin_anemometer = 23; // Impulsgeber des Anemometer
 unsigned long start_time = 0;
 unsigned long end_time = 0;
 int steps = 0;
-int steps_schwellwert = 4;
+int steps_schwellwert = 8;
 
 /////////////////////////////////////////////////////////////////////////// Schleifen verwalten
 unsigned long previousMillis_Sturmcheck = 0; // Windstärke prüfen
 unsigned long interval_Sturmcheck = 5000; 
 
 unsigned long previousMillis_sonnensensor = 0; // Sonnenstand prüfen
-unsigned long interval_sonnensensor = 15000; 
+unsigned long interval_sonnensensor = 50000; 
 
 unsigned long previousMillis_sturmschutzschalter = 0; // Sturmschutz Schalter prüfen
 unsigned long interval_sturmschutzschalter = 1200; 
@@ -106,54 +107,53 @@ Serial.println(helligkeit_schwellwert);
 if (sonne_quersumme < helligkeit_schwellwert) {
 Serial.println("Helligkeit - Ausrichten ");
 
-horizontal_hoch   = (sensorSonne_NO + sensorSonne_NW)/2;
-horizontal_runter = (sensorSonne_SO + sensorSonne_SW)/2;
-vertikal_rechts   = (sensorSonne_NO + sensorSonne_SO )/2;
-vertikal_links    = (sensorSonne_NW + sensorSonne_SW)/2;
+horizontal_hoch   = ((sensorSonne_NO + sensorSonne_NW)/2)*(-1);
+horizontal_runter = ((sensorSonne_SO + sensorSonne_SW)/2)*(-1);
+vertikal_rechts   = ((sensorSonne_NO + sensorSonne_SO)/2)*(-1);
+vertikal_links    = ((sensorSonne_NW + sensorSonne_SW)/2)*(-1);
 
     // Sonnentraking Drehen
-    differenz_drehen = (sensorSonne_NW + sensorSonne_SW)/2 - (sensorSonne_NO + sensorSonne_SO)/2;
+    differenz_drehen = (sensorSonne_NW + sensorSonne_SW)/2  - (sensorSonne_NO + sensorSonne_SO)/2;
     Serial.print("Differenz Drehen: ");
     Serial.println(differenz_drehen);
 
 
-    if (vertikal_rechts > vertikal_links && (vertikal_rechts-vertikal_links) > traker_tolleranz) {
-      Serial.println("Motor drehen - RECHTS");
-      m2(2);  
+    if (vertikal_rechts > vertikal_links && (vertikal_rechts-vertikal_links) > traker_tolleranz_drehen) {
+      Serial.println("Motor drehen - LINKS");
+      m2(1);  
        delay(1000);
     }
     
-    if (vertikal_links > vertikal_rechts && (vertikal_links-vertikal_rechts) > traker_tolleranz) {
-      Serial.println("Motor drehen - LINKS");
-      m2(1); 
+    if (vertikal_links > vertikal_rechts && (vertikal_links-vertikal_rechts) > traker_tolleranz_drehen) {
+      Serial.println("Motor drehen - RECHTS");
+      m2(2); 
        delay(1000);
     }
     // Motor stoppe
         m2(3);
-    delay(3000);   
+    delay(2000);   
 
     // Schwellwert überschritten Ausrichten
     // Sonnentraking Neigen
-    differenz_neigen = (sensorSonne_NO + sensorSonne_NW)/2 - (sensorSonne_SO + sensorSonne_SW)/2;
+    differenz_neigen = ((sensorSonne_NO + sensorSonne_NW)/2) - ((sensorSonne_SO + sensorSonne_SW)/2);
     Serial.print("Differenz Neigen: ");
     Serial.println(differenz_neigen);
 
 
-if (horizontal_hoch > horizontal_runter && (horizontal_hoch-horizontal_runter) > traker_tolleranz) {
+if (horizontal_hoch > horizontal_runter && (horizontal_hoch-horizontal_runter) > traker_tolleranz_neigen) {
       Serial.println("Motor neigen - RUNTER");
-      m1(1); 
+      m1(2); 
        delay(1000);
 }
  
-if (horizontal_runter > horizontal_hoch && (horizontal_runter-horizontal_hoch) > traker_tolleranz) {
+if (horizontal_runter > horizontal_hoch && (horizontal_runter-horizontal_hoch) > traker_tolleranz_neigen) {
       Serial.println("Motor neigen - HOCH");
-      m1(2); 
+      m1(1); 
        delay(1000);      
 }
 
     // Motor stoppen
     m1(3);
-    delay(3000);
 
 
 } else {
@@ -165,6 +165,7 @@ Serial.println("Helligkeit - Nichts tun ");
   // Platte horizontal stellen
     Serial.println("Platten Nachtstellung");
     m1(2);
+    m2(1);
   } else {
     Serial.println("Zu wenig Sonne, keine Bewegung");
 
@@ -329,7 +330,7 @@ void loop() {
       previousMillis_sturmschutzschalter = millis(); 
       // Windstärke prüfen
       //Serial.println("Sturmschutzschalter Prüfen");
-      sturmschutzschalter();
+     sturmschutzschalter();
     }
 
 
