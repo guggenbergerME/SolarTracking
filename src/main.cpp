@@ -22,7 +22,7 @@ int differenz_neigen, differenz_drehen, sonne_quersumme, neigen_fahrt;
 int traker_tolleranz_neigen = 100; // Getestet mit 300
 int traker_tolleranz_drehen = 150;
 int helligkeit_schwellwert = 700; // Wolkenschwellwert
-int helligkeit_nachtstellung = 1500; // Wolkenschwellwert
+int helligkeit_nachtstellung = 1400; // Wolkenschwellwert
 
 /////////////////////////////////////////////////////////////////////////// Windsensor Variablen
 int wind_zu_stark = 0;
@@ -38,7 +38,7 @@ unsigned long previousMillis_Sturmcheck = 0; // Windstärke prüfen
 unsigned long interval_Sturmcheck = 5000; 
 
 unsigned long previousMillis_sonnensensor = 0; // Sonnenstand prüfen
-unsigned long interval_sonnensensor = 50000; 
+unsigned long interval_sonnensensor = 25000; 
 
 unsigned long previousMillis_sturmschutzschalter = 0; // Sturmschutz Schalter prüfen
 unsigned long interval_sturmschutzschalter = 1200; 
