@@ -19,8 +19,8 @@ const int adc_SW = 32; //ADC1_9 - Fotowiderstand
 int sensorSonne_NO, sensorSonne_NW, sensorSonne_SO, sensorSonne_SW;
 int horizontal_hoch, horizontal_runter, vertikal_rechts, vertikal_links; 
 int differenz_neigen, differenz_drehen, sonne_quersumme, neigen_fahrt;
-int traker_tolleranz_neigen = 60; // Getestet mit 300
-int traker_tolleranz_drehen = 90;
+int traker_tolleranz_neigen = 30; // Getestet mit 300
+int traker_tolleranz_drehen = 60;
 int helligkeit_schwellwert = 700; // Wolkenschwellwert
 int helligkeit_nachtstellung = 1400; // Wolkenschwellwert
 
@@ -121,7 +121,7 @@ vertikal_links    = ((sensorSonne_NW + sensorSonne_SW)/2)*(-1);
     if (vertikal_rechts > vertikal_links && (vertikal_rechts-vertikal_links) > traker_tolleranz_drehen) {
       Serial.println("Motor drehen - LINKS");
       m2(1);  
-       delay(1000);
+      // delay(1000);
     } else {
       m2(3);
     }
@@ -129,7 +129,7 @@ vertikal_links    = ((sensorSonne_NW + sensorSonne_SW)/2)*(-1);
     if (vertikal_links > vertikal_rechts && (vertikal_links-vertikal_rechts) > traker_tolleranz_drehen) {
       Serial.println("Motor drehen - RECHTS");
       m2(2); 
-       delay(1000);
+      // delay(1000);
     } else {
       m2(3);
     }
@@ -147,7 +147,7 @@ vertikal_links    = ((sensorSonne_NW + sensorSonne_SW)/2)*(-1);
 if (horizontal_hoch > horizontal_runter && (horizontal_hoch-horizontal_runter) > traker_tolleranz_neigen) {
       Serial.println("Motor neigen - RUNTER");
       m1(2); 
-       delay(1000);
+      // delay(1000);
 } else {
   m1(3);
 }
@@ -155,7 +155,7 @@ if (horizontal_hoch > horizontal_runter && (horizontal_hoch-horizontal_runter) >
 if (horizontal_runter > horizontal_hoch && (horizontal_runter-horizontal_hoch) > traker_tolleranz_neigen) {
       Serial.println("Motor neigen - HOCH");
       m1(1); 
-       delay(1000);      
+      // delay(1000);      
 } else {
   m1(3);
 }
