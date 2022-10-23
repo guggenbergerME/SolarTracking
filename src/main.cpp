@@ -19,8 +19,8 @@ const int adc_SW = 32; //ADC1_9 - Fotowiderstand
 int sensorSonne_NO, sensorSonne_NW, sensorSonne_SO, sensorSonne_SW;
 int horizontal_hoch, horizontal_runter, vertikal_rechts, vertikal_links; 
 int differenz_neigen, differenz_drehen, sonne_quersumme, neigen_fahrt;
-int traker_tolleranz_neigen = 100; // Getestet mit 300
-int traker_tolleranz_drehen = 150;
+int traker_tolleranz_neigen = 60; // Getestet mit 300
+int traker_tolleranz_drehen = 90;
 int helligkeit_schwellwert = 700; // Wolkenschwellwert
 int helligkeit_nachtstellung = 1400; // Wolkenschwellwert
 
@@ -38,7 +38,7 @@ unsigned long previousMillis_Sturmcheck = 0; // Windstärke prüfen
 unsigned long interval_Sturmcheck = 5000; 
 
 unsigned long previousMillis_sonnensensor = 0; // Sonnenstand prüfen
-unsigned long interval_sonnensensor = 25000; 
+unsigned long interval_sonnensensor = 5000; 
 
 unsigned long previousMillis_sturmschutzschalter = 0; // Sturmschutz Schalter prüfen
 unsigned long interval_sturmschutzschalter = 1200; 
@@ -122,16 +122,20 @@ vertikal_links    = ((sensorSonne_NW + sensorSonne_SW)/2)*(-1);
       Serial.println("Motor drehen - LINKS");
       m2(1);  
        delay(1000);
+    } else {
+      m2(3);
     }
     
     if (vertikal_links > vertikal_rechts && (vertikal_links-vertikal_rechts) > traker_tolleranz_drehen) {
       Serial.println("Motor drehen - RECHTS");
       m2(2); 
        delay(1000);
+    } else {
+      m2(3);
     }
     // Motor stoppe
-        m2(3);
-    delay(2000);   
+    /*    m2(3);
+    delay(2000);   */
 
     // Schwellwert überschritten Ausrichten
     // Sonnentraking Neigen
@@ -144,16 +148,20 @@ if (horizontal_hoch > horizontal_runter && (horizontal_hoch-horizontal_runter) >
       Serial.println("Motor neigen - RUNTER");
       m1(2); 
        delay(1000);
+} else {
+  m1(3);
 }
  
 if (horizontal_runter > horizontal_hoch && (horizontal_runter-horizontal_hoch) > traker_tolleranz_neigen) {
       Serial.println("Motor neigen - HOCH");
       m1(1); 
        delay(1000);      
+} else {
+  m1(3);
 }
 
     // Motor stoppen
-    m1(3);
+    //m1(3);
 
 
 } else {
