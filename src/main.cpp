@@ -1,4 +1,13 @@
 #include <Arduino.h>
+#include <PubSubClient.h>  
+#include "WiFi.h"
+ #include <SPI.h>
+#include <Adafruit_ADS1X15.h> 
+
+/////////////////////////////////////////////////////////////////////////// mqtt variable
+char msgToPublish[60];
+char stgFromFloat[10];
+
 
 /////////////////////////////////////////////////////////////////////////// Pin output zuweisen
 #define M1_re 2   // D2  - grau weiss - Pin 7
@@ -16,13 +25,17 @@ const int adc_NW = 35; //ADC1_7 - Fotowiderstand
 const int adc_SO = 33; //ADC1_8 - Fotowiderstand
 const int adc_SW = 32; //ADC1_9 - Fotowiderstand 
 
+/////////////////////////////////////////////////////////////////////////// ADC Strommessung ACS712
+const int acd_strom = 39; //Strommesser ACD Panel 
+int acd_strom_acs712;
+
 int sensorSonne_NO, sensorSonne_NW, sensorSonne_SO, sensorSonne_SW;
 int horizontal_hoch, horizontal_runter, vertikal_rechts, vertikal_links; 
 int differenz_neigen, differenz_drehen, sonne_quersumme, neigen_fahrt;
-int traker_tolleranz_neigen = 90; // Getestet mit 300
-int traker_tolleranz_drehen = 120;
-int helligkeit_schwellwert = 750; // Wolkenschwellwert
-int helligkeit_nachtstellung = 1600; // Wolkenschwellwert
+int traker_tolleranz_neigen = 75; // Getestet mit 300
+int traker_tolleranz_drehen = 90;
+int helligkeit_schwellwert = 550; // Wolkenschwellwert
+int helligkeit_nachtstellung = 2000; // Wolkenschwellwert
 
 /////////////////////////////////////////////////////////////////////////// Windsensor Variablen
 int wind_zu_stark = 0;
@@ -47,6 +60,9 @@ unsigned long interval_sturmschutzschalter = 1200;
 unsigned long previousMillis_panelsenkrecht = 0; // Sturmschutz Schalter prüfen
 unsigned long interval_panelsenkrecht = 1300; 
 
+unsigned long previousMillis_strom_messung = 0; // Sturmschutz Schalter prüfen
+unsigned long interval_strom_messung = 3500; 
+
 /////////////////////////////////////////////////////////////////////////// Funktionsprototypen
 void loop                       ();
 void m1                         (int); // Panel neigen
@@ -56,13 +72,123 @@ void panel_senkrecht            ();
 void sonnenaufgang              ();
 void sonnensensor               ();
 void sturmschutzschalter        ();
+void callback                   (char* topic, byte* payload, unsigned int length);
+void reconnect                  ();
+void strom_panel_messen         ();
+
+/////////////////////////////////////////////////////////////////////////// Kartendaten 
+const char* kartenID = "Solarmodul_001";
+
+/////////////////////////////////////////////////////////////////////////// MQTT 
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+const char* mqtt_server = "192.168.150.1";
+
+/////////////////////////////////////////////////////////////////////////// SETUP - Wifi
+void wifi_setup() {
+
+// WiFi Zugangsdaten
+const char* WIFI_SSID = "GuggenbergerLinux";
+const char* WIFI_PASS = "Isabelle2014samira";
+
+// Static IP
+IPAddress local_IP(192, 168, 13, 51);
+IPAddress gateway(192, 168, 1, 1);
+IPAddress subnet(255, 0, 0, 0);  
+IPAddress dns(192, 168, 1, 1); 
+
+// Verbindung zu SSID
+Serial.print("Verbindung zu SSID - ");
+Serial.println(WIFI_SSID); 
+
+// IP zuweisen
+if (!WiFi.config(local_IP, gateway, subnet, dns)) {
+   Serial.println("STA fehlerhaft!");
+  }
+
+// WiFI Modus setzen
+WiFi.mode(WIFI_OFF);
+WiFi.disconnect();
+delay(100);
+
+WiFi.begin(WIFI_SSID, WIFI_PASS);
+Serial.println("Verbindung aufbauen ...");
+
+while (WiFi.status() != WL_CONNECTED) {
+
+  if (WiFi.status() == WL_CONNECT_FAILED) {
+     Serial.println("Keine Verbindung zum SSID möglich : ");
+     Serial.println();
+     Serial.print("SSID: ");
+     Serial.println(WIFI_SSID);
+     Serial.print("Passwort: ");
+     Serial.println(WIFI_PASS);
+     Serial.println();
+    }
+  delay(2000);
+}
+    Serial.println("");
+    Serial.println("Mit Wifi verbunden");
+    Serial.println("IP Adresse: ");
+    Serial.println(WiFi.localIP());
+
+}
+
+//****************************************************************************************** VOID mqtt reconnected
+void reconnect() {
+  // Loop until we're reconnected
+  while (!client.connected()) {
+    Serial.print("Baue Verbindung zum mqtt Server auf. IP: ");
+    // Attempt to connect
+    if (client.connect(kartenID,"zugang1","43b4134735")) {
+      Serial.println("connected");
+      ////////////////////////////////////////////////////////////////////////// SUBSCRIBE Eintraege
+      //client.subscribe("relais_licht_wohnzimmer_1_0/IN");
+
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      // Wait 5 seconds before retrying
+      delay(5000);
+    }
+  }
+}
+
+/////////////////////////////////////////////////////////////////////////// MQTT callback
+void callback(char* topic, byte* payload, unsigned int length) {
+/*
+  /////////////////////////////////////////////////////////////////////////// Relais 0
+      if (strcmp(topic,"relais_licht_wohnzimmer_1_0/IN")==0) {
+
+          // ON und OFF Funktion auslesen
+          if ((char)payload[0] == 'o' && (char)payload[1] == 'n') {  
+                  Serial.println("relais_0 -> AN");
+
+                }
+
+          if ((char)payload[0] == 'o' && (char)payload[1] == 'f' && (char)payload[2] == 'f') {  
+                  Serial.println("relais_0 -> AUS");
+
+                }
+        } 
+  */
+}
 
 
 /////////////////////////////////////////////////////////////////////////// SETUP
 void setup() {
 
-  // Serielle Kommunikation starten
-  Serial.begin(38400);
+// Serielle Kommunikation starten
+Serial.begin(38400);
+
+// Wifi setup
+wifi_setup();
+
+// MQTT Broker
+  client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
 
 // Sturmschutzschalter init
 pinMode(sturmschutzschalterpin, INPUT);
@@ -75,6 +201,38 @@ pinMode(panelsenkrechtpin, INPUT);
   pinMode(M1_li,OUTPUT);
   pinMode(M2_re,OUTPUT);
   pinMode(M2_li,OUTPUT);
+}
+
+/////////////////////////////////////////////////////////////////////////// Sonnensensor - Fotowiderstände
+void strom_panel_messen(){
+  // ACD Strimsensor auslesen ACS712
+  acd_strom_acs712 = analogRead(acd_strom); 
+
+  float voltage = acd_strom_acs712 * 20 / 1023.0;
+  float current = (voltage - 0) * 0.118;
+  if (current < 0.16) {
+    current = 0;
+  }
+
+  Serial.print("Spannung : ");
+  Serial.println(voltage);
+    
+    // mqtt Datensatz senden
+    dtostrf(voltage, 4, 2, stgFromFloat);
+    sprintf(msgToPublish, "%s", stgFromFloat);
+    client.publish("Solarpanel/001/spannung", msgToPublish);
+
+  Serial.print("Strom : ");
+  Serial.println(current);
+  
+      // mqtt Datensatz senden
+    dtostrf(current, 4, 2, stgFromFloat);
+    sprintf(msgToPublish, "%s", stgFromFloat);
+    client.publish("Solarpanel/001/strom", msgToPublish);
+
+
+
+
 }
 
 /////////////////////////////////////////////////////////////////////////// Sonnensensor - Fotowiderstände
@@ -114,68 +272,70 @@ vertikal_rechts   = ((sensorSonne_NO + sensorSonne_SO)/2)*(-1);
 vertikal_links    = ((sensorSonne_NW + sensorSonne_SW)/2)*(-1);
 
     // Sonnentraking Drehen
-    differenz_drehen = (sensorSonne_NW + sensorSonne_SW)/2  - (sensorSonne_NO + sensorSonne_SO)/2;
+    differenz_drehen = ((sensorSonne_NW + sensorSonne_SW)/2  - (sensorSonne_NO + sensorSonne_SO)/2) *(-1);
     Serial.print("Differenz Drehen: ");
     Serial.println(differenz_drehen);
 
 
     if (vertikal_rechts > vertikal_links && (vertikal_rechts-vertikal_links) > traker_tolleranz_drehen) {
-      Serial.println("Motor drehen - LINKS");
+      Serial.println("XXX Motor drehen - LINKS");
+      client.publish("Solarpanel/001/meldung", "Drehe ... links");
       m2(1); 
+      //delay(1000);
     } else {
       m2(3);
     }
     
     if (vertikal_links > vertikal_rechts && (vertikal_links-vertikal_rechts) > traker_tolleranz_drehen) {
       Serial.println("XXXX Motor drehen - RECHTS");
+      client.publish("Solarpanel/001/meldung", "Drehe ... rechts");
       m2(2); 
     //delay(1000);
     } else {
       m2(3);
     }
-    // Motor stoppe
-    /*    m2(3);
-    delay(2000);   */
 
     // Schwellwert überschritten Ausrichten
     // Sonnentraking Neigen
-    differenz_neigen = ((sensorSonne_NO + sensorSonne_NW)/2) - ((sensorSonne_SO + sensorSonne_SW)/2);
+    differenz_neigen = (((sensorSonne_NO + sensorSonne_NW)/2) - ((sensorSonne_SO + sensorSonne_SW)/2)) * (-1);
     Serial.print("Differenz Neigen: ");
     Serial.println(differenz_neigen);
 
 
-if (horizontal_hoch > horizontal_runter && (horizontal_hoch-horizontal_runter) > traker_tolleranz_neigen) {
-      Serial.println("Motor neigen - RUNTER");
-      m1(2); 
-      // delay(1000);
-} else {
-  m1(3);
-}
+    if (horizontal_hoch > horizontal_runter && (horizontal_hoch-horizontal_runter) > traker_tolleranz_neigen) {
+          Serial.println("YYYY Motor neigen - RUNTER");
+          client.publish("Solarpanel/001/meldung", "Neigen ... runter");
+          m1(2); 
+          // delay(1000);
+    } else {
+      m1(3);
+    }
  
-if (horizontal_runter > horizontal_hoch && (horizontal_runter-horizontal_hoch) > traker_tolleranz_neigen) {
-      Serial.println("Motor neigen - HOCH");
-      m1(1); 
-      // delay(1000);      
-} else {
-  m1(3);
-}
-
-    // Motor stoppen
-    //m1(3);
+    if (horizontal_runter > horizontal_hoch && (horizontal_runter-horizontal_hoch) > traker_tolleranz_neigen) {
+          Serial.println("YYYY Motor neigen - HOCH");
+          client.publish("Solarpanel/001/meldung", "Neigen ... hoch");
+          m1(1); 
+          // delay(1000);      
+    } else {
+      m1(3);
+    }
 
 
 } else {
 Serial.println("Helligkeit - Nichts tun ");
+client.publish("Solarpanel/001/meldung", "Sonneneinstrahlung zu gering");
 
 // Wenn die Helligkeit dunkler als der Nachtwert ist Platten horizontal stellen
 
   if (sonne_quersumme > helligkeit_nachtstellung) { 
   // Platte horizontal stellen
     Serial.println("Platten Nachtstellung");
+    client.publish("Solarpanel/001/meldung", "Nachtstellung!");
     m1(2);
     m2(1);
   } else {
     Serial.println("Zu wenig Sonne, keine Bewegung");
+    client.publish("Solarpanel/001/meldung", "Sonneneinstrahlung zu gering");
 
   }
 
@@ -286,6 +446,7 @@ void panel_senkrecht() {
       {
         //blink
         Serial.println("Panele senkrecht stellen");
+        client.publish("Solarpanel/001/meldung", "Panele senkrecht");
         m1(1);
 
         delay(500);
@@ -312,6 +473,7 @@ void sturmschutzschalter() {
       {
         //blink
         Serial.println("Alles unterbrechen wegen Windschutz!");
+        client.publish("Solarpanel/001/meldung", "Sturmschutzschalter aktiv");
         m1(2);
         delay(500);
       }
@@ -321,6 +483,13 @@ void sturmschutzschalter() {
 /////////////////////////////////////////////////////////////////////////// LOOP
 void loop() {
 
+  // MQTT Server kontaktieren
+  if (!client.connected()) {
+  reconnect();
+  }
+  client.loop();
+
+/*
   //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Auf Sturm prüfen
   if (millis() - previousMillis_Sturmcheck > interval_Sturmcheck) {
       previousMillis_Sturmcheck = millis(); 
@@ -330,7 +499,14 @@ void loop() {
       steps = 0;
       sturmschutz();
     }
+*/
 
+  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Sturmschutzschalter abfragen
+  if (millis() - previousMillis_strom_messung > interval_strom_messung) {
+      previousMillis_strom_messung = millis(); 
+      // Stromstärke messen
+     strom_panel_messen();
+    }
 
   //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Sturmschutzschalter abfragen
   if (millis() - previousMillis_sturmschutzschalter > interval_sturmschutzschalter) {
@@ -355,12 +531,11 @@ void loop() {
       previousMillis_sonnensensor = millis(); 
       // Sonnenposition prüfen wenn windstärke okay
       if (wind_zu_stark != 1) {
-        Serial.println("Position der Sonne prüfen.");
-      sonnensensor();
+       sonnensensor();
       } else {
         Serial.println("Keine Ausrichtung, da Wind zu stark!");
+        client.publish("Solarpanel/001/meldung", "Wind zu stark!");
       }
   
     }
-
 }
