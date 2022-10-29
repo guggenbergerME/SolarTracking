@@ -32,9 +32,9 @@ int acd_strom_acs712;
 int sensorSonne_NO, sensorSonne_NW, sensorSonne_SO, sensorSonne_SW;
 int horizontal_hoch, horizontal_runter, vertikal_rechts, vertikal_links; 
 int differenz_neigen, differenz_drehen, sonne_quersumme, neigen_fahrt;
-int traker_tolleranz_neigen = 75; // Getestet mit 300
-int traker_tolleranz_drehen = 90;
-int helligkeit_schwellwert = 550; // Wolkenschwellwert
+int traker_tolleranz_neigen = 90; // Getestet mit 300
+int traker_tolleranz_drehen = 110;
+int helligkeit_schwellwert = 245; // Wolkenschwellwert
 int helligkeit_nachtstellung = 2000; // Wolkenschwellwert
 
 /////////////////////////////////////////////////////////////////////////// Windsensor Variablen
@@ -61,7 +61,7 @@ unsigned long previousMillis_panelsenkrecht = 0; // Sturmschutz Schalter prüfen
 unsigned long interval_panelsenkrecht = 1300; 
 
 unsigned long previousMillis_strom_messung = 0; // Sturmschutz Schalter prüfen
-unsigned long interval_strom_messung = 3500; 
+unsigned long interval_strom_messung = 25000; 
 
 /////////////////////////////////////////////////////////////////////////// Funktionsprototypen
 void loop                       ();
@@ -208,14 +208,15 @@ void strom_panel_messen(){
   // ACD Strimsensor auslesen ACS712
   acd_strom_acs712 = analogRead(acd_strom); 
 
-  float voltage = acd_strom_acs712 * 20 / 1023.0;
-  float current = (voltage - 0) * 0.118;
+  float voltage = acd_strom_acs712 * 5 / 1023.0;
+  float current = (voltage - 2.5) /0.100;
+  float volt = voltage / 3 ;
   if (current < 0.16) {
     current = 0;
   }
 
   Serial.print("Spannung : ");
-  Serial.println(voltage);
+  Serial.println(volt);
     
     // mqtt Datensatz senden
     dtostrf(voltage, 4, 2, stgFromFloat);
@@ -255,7 +256,14 @@ Serial.print("Wert sensorSonne_SW : ");
 Serial.println(sensorSonne_SW);
 
 // Quersumme aller Werte
-sonne_quersumme = (sensorSonne_NO + sensorSonne_NW + sensorSonne_SO + sensorSonne_SW) / 4;
+//sonne_quersumme = (sensorSonne_NO + sensorSonne_NW + sensorSonne_SO + sensorSonne_SW) / 4;
+sonne_quersumme = (sensorSonne_SO + sensorSonne_SW) / 2;
+
+      // mqtt Datensatz senden
+    dtostrf(sonne_quersumme, 4, 0, stgFromFloat);
+    sprintf(msgToPublish, "%s", stgFromFloat);
+    client.publish("Solarpanel/001/sonnenQuersumme", msgToPublish);
+
 
 Serial.print("Sonne Quersumme: ");
 Serial.println(sonne_quersumme);
@@ -281,7 +289,7 @@ vertikal_links    = ((sensorSonne_NW + sensorSonne_SW)/2)*(-1);
       Serial.println("XXX Motor drehen - LINKS");
       client.publish("Solarpanel/001/meldung", "Drehe ... links");
       m2(1); 
-      //delay(1000);
+      delay(1000);
     } else {
       m2(3);
     }
@@ -290,7 +298,7 @@ vertikal_links    = ((sensorSonne_NW + sensorSonne_SW)/2)*(-1);
       Serial.println("XXXX Motor drehen - RECHTS");
       client.publish("Solarpanel/001/meldung", "Drehe ... rechts");
       m2(2); 
-    //delay(1000);
+    delay(1000);
     } else {
       m2(3);
     }
