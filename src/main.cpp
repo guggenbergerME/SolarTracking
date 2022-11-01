@@ -29,30 +29,31 @@ const int adc_SW = 32; //ADC1_9 - Fotowiderstand
 const int acd_strom = 39; //Strommesser ACD Panel 
 int acd_strom_acs712;
 
+/////////////////////////////////////////////////////////////////////////// Variablen Sonensensor
 int sensorSonne_NO, sensorSonne_NW, sensorSonne_SO, sensorSonne_SW;
 int horizontal_hoch, horizontal_runter, vertikal_rechts, vertikal_links; 
 int differenz_neigen, differenz_drehen, sonne_quersumme, neigen_fahrt;
 int traker_tolleranz_neigen = 90; // Getestet mit 300
 int traker_tolleranz_drehen = 110;
-int helligkeit_schwellwert = 245; // Wolkenschwellwert
-int helligkeit_nachtstellung = 2000; // Wolkenschwellwert
+int helligkeit_schwellwert = 750; // Wolkenschwellwert
+int helligkeit_nachtstellung = 1600; // Wolkenschwellwert
 
 /////////////////////////////////////////////////////////////////////////// Windsensor Variablen
 int wind_zu_stark = 0;
-int sturmschutz_pause = 45000;
+int sturmschutz_pause = 150000;
 int pin_anemometer = 23; // Impulsgeber des Anemometer
 unsigned long start_time = 0;
 unsigned long end_time = 0
 ;
 int steps = 0;
-int steps_schwellwert = 50;
+int steps_schwellwert = 120;
 
 /////////////////////////////////////////////////////////////////////////// Schleifen verwalten
 unsigned long previousMillis_Sturmcheck = 0; // Windstärke prüfen
 unsigned long interval_Sturmcheck = 5000; 
 
 unsigned long previousMillis_sonnensensor = 0; // Sonnenstand prüfen
-unsigned long interval_sonnensensor = 5000; 
+unsigned long interval_sonnensensor = 10000; 
 
 unsigned long previousMillis_sturmschutzschalter = 0; // Sturmschutz Schalter prüfen
 unsigned long interval_sturmschutzschalter = 1200; 
@@ -61,7 +62,7 @@ unsigned long previousMillis_panelsenkrecht = 0; // Sturmschutz Schalter prüfen
 unsigned long interval_panelsenkrecht = 1300; 
 
 unsigned long previousMillis_strom_messung = 0; // Sturmschutz Schalter prüfen
-unsigned long interval_strom_messung = 25000; 
+unsigned long interval_strom_messung = 35000; 
 
 /////////////////////////////////////////////////////////////////////////// Funktionsprototypen
 void loop                       ();
@@ -139,10 +140,10 @@ while (WiFi.status() != WL_CONNECTED) {
 void reconnect() {
   // Loop until we're reconnected
   while (!client.connected()) {
-    Serial.print("Baue Verbindung zum mqtt Server auf. IP: ");
+    //Serial.print("Baue Verbindung zum mqtt Server auf. IP: ");
     // Attempt to connect
     if (client.connect(kartenID,"zugang1","43b4134735")) {
-      Serial.println("connected");
+      //Serial.println("connected");
       ////////////////////////////////////////////////////////////////////////// SUBSCRIBE Eintraege
       //client.subscribe("relais_licht_wohnzimmer_1_0/IN");
 
@@ -203,36 +204,92 @@ pinMode(panelsenkrechtpin, INPUT);
   pinMode(M2_li,OUTPUT);
 }
 
+
+float ACS712read(int mitteln) {
+// Den ACS712 Stromsensor auslesen
+// Sens ist im Datenblatt auf Seite 2 mit 185 angegeben.
+// Für meinen Sensor habe ich 186 ermittelt bei 5.0V Vcc.
+// Sens nimmt mit ca. 38 pro Volt VCC ab.
+//
+// 3,3V muss zu Analog Eingang 5 gebrückt werden.
+// Der Sensoreingang ist Analog 1
+//
+// Parameter mitteln : die Anzahl der Mittlungen
+// 
+// Matthias Busse 9.5.2014 Version 1.0
+
+float sense = 100.0;           // mV/A Datenblatt Seite 2
+float sensdiff = 39.0;         // sense nimmt mit ca. 39/V Vcc ab. 
+float vcc = 4.61 ;
+float vsensor, amp, ampmittel=0;
+int i;
+  
+  for(i=0;i< mitteln;i++) {
+    //vcc = (float) 3.30 / analogRead(5) * 1023.0;    // Versorgungsspannung ermitteln
+    vsensor = (analogRead(acd_strom) * vcc) / 4095; // Messwert auslesen
+
+   // Serial.print("ACD READ    : ");
+  //  Serial.println(analogRead(acd_strom)); 
+
+   // Serial.print("Vsensor     : ");
+  //  Serial.println(vsensor);
+
+    vsensor = (vsensor - (vcc/2))-0.75;            // Nulldurchgang (vcc/2) abziehen
+   // Serial.print("Vsensor  0  : ");
+   // Serial.println(vsensor);
+ 
+    amp = ((vsensor * sense)/10)*1.02;            // Ampere berechnen
+    Serial.print("amp         : ");
+    Serial.println(amp);   
+
+    ampmittel += amp;    
+  
+  }
+  return ampmittel/mitteln;
+}
+
 /////////////////////////////////////////////////////////////////////////// Sonnensensor - Fotowiderstände
 void strom_panel_messen(){
   // ACD Strimsensor auslesen ACS712
-  acd_strom_acs712 = analogRead(acd_strom); 
+  //acd_strom_acs712 = analogRead(acd_strom); 
 
-  float voltage = acd_strom_acs712 * 5 / 1023.0;
-  float current = (voltage - 2.5) /0.100;
-  float volt = voltage / 3 ;
-  if (current < 0.16) {
-    current = 0;
-  }
+//Serial.println(analogRead(acd_strom));
+float panelstrom = ACS712read(25);
 
-  Serial.print("Spannung : ");
-  Serial.println(volt);
+Serial.println(panelstrom);
+
+float spannung_system = panelstrom / 0.065 ;
+
+  Serial.print("Spannung     : ");
+  Serial.println(spannung_system); 
+
+
+  float leistung = spannung_system * panelstrom;
+
+    Serial.print("Leistung : ");
+  Serial.println(leistung);
     
     // mqtt Datensatz senden
-    dtostrf(voltage, 4, 2, stgFromFloat);
+    dtostrf(leistung, 4, 2, stgFromFloat);
+    sprintf(msgToPublish, "%s", stgFromFloat);
+    client.publish("Solarpanel/001/leistung", msgToPublish);
+
+  float panelenspannung = spannung_system;
+  Serial.print("Spannung : ");
+  Serial.println(panelenspannung);
+    
+    // mqtt Datensatz senden
+    dtostrf(panelenspannung, 4, 2, stgFromFloat);
     sprintf(msgToPublish, "%s", stgFromFloat);
     client.publish("Solarpanel/001/spannung", msgToPublish);
 
   Serial.print("Strom : ");
-  Serial.println(current);
+  Serial.println(panelstrom);
   
       // mqtt Datensatz senden
-    dtostrf(current, 4, 2, stgFromFloat);
+    dtostrf(panelstrom, 4, 2, stgFromFloat);
     sprintf(msgToPublish, "%s", stgFromFloat);
     client.publish("Solarpanel/001/strom", msgToPublish);
-
-
-
 
 }
 
@@ -259,8 +316,10 @@ Serial.println(sensorSonne_SW);
 //sonne_quersumme = (sensorSonne_NO + sensorSonne_NW + sensorSonne_SO + sensorSonne_SW) / 4;
 sonne_quersumme = (sensorSonne_SO + sensorSonne_SW) / 2;
 
+int quersumme_mqtt = 4096 - sonne_quersumme;
+
       // mqtt Datensatz senden
-    dtostrf(sonne_quersumme, 4, 0, stgFromFloat);
+    dtostrf(quersumme_mqtt, 4, 0, stgFromFloat);
     sprintf(msgToPublish, "%s", stgFromFloat);
     client.publish("Solarpanel/001/sonnenQuersumme", msgToPublish);
 
@@ -435,7 +494,7 @@ void sturmschutz() {
 
         Serial.println("Wind zu stark Panele sichern ");
         // Panel in Position fahren
-        //m1(2);
+        m1(2);
         // Lange pause um Prozessor zu unterbrechen.
         delay (sturmschutz_pause);
         
@@ -497,7 +556,7 @@ void loop() {
   }
   client.loop();
 
-/*
+
   //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Auf Sturm prüfen
   if (millis() - previousMillis_Sturmcheck > interval_Sturmcheck) {
       previousMillis_Sturmcheck = millis(); 
@@ -507,7 +566,7 @@ void loop() {
       steps = 0;
       sturmschutz();
     }
-*/
+
 
   //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Sturmschutzschalter abfragen
   if (millis() - previousMillis_strom_messung > interval_strom_messung) {
@@ -546,4 +605,6 @@ void loop() {
       }
   
     }
+
+    delay (300);
 }
