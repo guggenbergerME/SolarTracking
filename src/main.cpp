@@ -1,8 +1,6 @@
 #include <Arduino.h>
 #include <PubSubClient.h>  
 #include "WiFi.h"
- #include <SPI.h>
-#include <Adafruit_ADS1X15.h> 
 
 /////////////////////////////////////////////////////////////////////////// mqtt variable
 char msgToPublish[60];
@@ -75,10 +73,9 @@ void sonnensensor               ();
 void sturmschutzschalter        ();
 void callback                   (char* topic, byte* payload, unsigned int length);
 void reconnect                  ();
-void strom_panel_messen         ();
 
 /////////////////////////////////////////////////////////////////////////// Kartendaten 
-const char* kartenID = "Solarmodul_001";
+const char* kartenID = "Solarmodul_001_Panele";
 
 /////////////////////////////////////////////////////////////////////////// MQTT 
 WiFiClient espClient;
@@ -202,95 +199,6 @@ pinMode(panelsenkrechtpin, INPUT);
   pinMode(M1_li,OUTPUT);
   pinMode(M2_re,OUTPUT);
   pinMode(M2_li,OUTPUT);
-}
-
-
-float ACS712read(int mitteln) {
-// Den ACS712 Stromsensor auslesen
-// Sens ist im Datenblatt auf Seite 2 mit 185 angegeben.
-// Für meinen Sensor habe ich 186 ermittelt bei 5.0V Vcc.
-// Sens nimmt mit ca. 38 pro Volt VCC ab.
-//
-// 3,3V muss zu Analog Eingang 5 gebrückt werden.
-// Der Sensoreingang ist Analog 1
-//
-// Parameter mitteln : die Anzahl der Mittlungen
-// 
-// Matthias Busse 9.5.2014 Version 1.0
-
-float sense = 100.0;           // mV/A Datenblatt Seite 2
-float sensdiff = 39.0;         // sense nimmt mit ca. 39/V Vcc ab. 
-float vcc = 4.61 ;
-float vsensor, amp, ampmittel=0;
-int i;
-  
-  for(i=0;i< mitteln;i++) {
-    //vcc = (float) 3.30 / analogRead(5) * 1023.0;    // Versorgungsspannung ermitteln
-    vsensor = (analogRead(acd_strom) * vcc) / 4095; // Messwert auslesen
-
-   // Serial.print("ACD READ    : ");
-  //  Serial.println(analogRead(acd_strom)); 
-
-   // Serial.print("Vsensor     : ");
-  //  Serial.println(vsensor);
-
-    vsensor = (vsensor - (vcc/2))-0.75;            // Nulldurchgang (vcc/2) abziehen
-   // Serial.print("Vsensor  0  : ");
-   // Serial.println(vsensor);
- 
-    amp = ((vsensor * sense)/10)*1.02;            // Ampere berechnen
-    Serial.print("amp         : ");
-    Serial.println(amp);   
-
-    ampmittel += amp;    
-  
-  }
-  return ampmittel/mitteln;
-}
-
-/////////////////////////////////////////////////////////////////////////// Sonnensensor - Fotowiderstände
-void strom_panel_messen(){
-  // ACD Strimsensor auslesen ACS712
-  //acd_strom_acs712 = analogRead(acd_strom); 
-
-//Serial.println(analogRead(acd_strom));
-float panelstrom = ACS712read(25);
-
-Serial.println(panelstrom);
-
-float spannung_system = panelstrom / 0.065 ;
-
-  Serial.print("Spannung     : ");
-  Serial.println(spannung_system); 
-
-
-  float leistung = spannung_system * panelstrom;
-
-    Serial.print("Leistung : ");
-  Serial.println(leistung);
-    
-    // mqtt Datensatz senden
-    dtostrf(leistung, 4, 2, stgFromFloat);
-    sprintf(msgToPublish, "%s", stgFromFloat);
-    client.publish("Solarpanel/001/leistung", msgToPublish);
-
-  float panelenspannung = spannung_system;
-  Serial.print("Spannung : ");
-  Serial.println(panelenspannung);
-    
-    // mqtt Datensatz senden
-    dtostrf(panelenspannung, 4, 2, stgFromFloat);
-    sprintf(msgToPublish, "%s", stgFromFloat);
-    client.publish("Solarpanel/001/spannung", msgToPublish);
-
-  Serial.print("Strom : ");
-  Serial.println(panelstrom);
-  
-      // mqtt Datensatz senden
-    dtostrf(panelstrom, 4, 2, stgFromFloat);
-    sprintf(msgToPublish, "%s", stgFromFloat);
-    client.publish("Solarpanel/001/strom", msgToPublish);
-
 }
 
 /////////////////////////////////////////////////////////////////////////// Sonnensensor - Fotowiderstände
@@ -549,13 +457,13 @@ void sturmschutzschalter() {
 
 /////////////////////////////////////////////////////////////////////////// LOOP
 void loop() {
-
+/*
   // MQTT Server kontaktieren
   if (!client.connected()) {
   reconnect();
   }
   client.loop();
-
+*/
 
   //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Auf Sturm prüfen
   if (millis() - previousMillis_Sturmcheck > interval_Sturmcheck) {
@@ -565,14 +473,6 @@ void loop() {
       // Messwert zurücksetzen
       steps = 0;
       sturmschutz();
-    }
-
-
-  //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Sturmschutzschalter abfragen
-  if (millis() - previousMillis_strom_messung > interval_strom_messung) {
-      previousMillis_strom_messung = millis(); 
-      // Stromstärke messen
-     strom_panel_messen();
     }
 
   //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Sturmschutzschalter abfragen
