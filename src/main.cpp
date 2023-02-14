@@ -336,6 +336,19 @@ void sturmschutzschalter() {
 /////////////////////////////////////////////////////////////////////////// LOOP
 void loop() {
 
+
+
+
+
+
+
+
+
+
+
+
+  
+
   //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ Auf Sturm prüfen
   if (millis() - previousMillis_Sturmcheck > interval_Sturmcheck) {
       previousMillis_Sturmcheck = millis(); 
